@@ -5,7 +5,7 @@ import path from 'path'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const IMAGE_DIR_ROOT = '/tmp/autotube-images'
+const IMAGE_DIR_ROOT = process.env.AUTOTUBE_IMAGE_DIR || '/tmp/autotube-images'
 
 /**
  * Serve a generated image by jobId + index. Supports HTTP Range for video

@@ -1,0 +1,1784 @@
+{
+  "generatedAt": "2026-08-30T01:34:49.650Z",
+  "searches": {
+    "general_endpoints_list": {
+      "query": "free text-to-image API endpoints list 2025",
+      "results": [
+        {
+          "url": "https://api.market/blog/astrosoft/image-generation/best-ai-Image-generation-apis",
+          "name": "7 Best AI Image Generation APIs in 2026: Pricing, Features",
+          "snippet": "Jul 15, 2026 — Discover the best AI image generation APIs of 2026: 1. Low-Cost Image Generate API 2. Ultra Low Cost AI Images 3. Flux 2 Pro 4.",
+          "host_name": "api.market",
+          "rank": 0,
+          "date": "Jul 15, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/Python/comments/1k9wx1f/request_free_or_50_imagesday_texttoimage_api_for",
+          "name": "50 images/day) Text-to-Image API for Python?",
+          "snippet": "Offers a free tier (or something close to ~50 images /day). Provides a Python SDK or at least a REST API that's easy to call from Python. Read more",
+          "host_name": "www.reddit.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://ai.google.dev/gemini-api/docs/models",
+          "name": "Models | Gemini API - Google AI for Developers",
+          "snippet": "3 days ago — Our first multimodal embedding model, mapping text , images , video, audio, and PDFs into a unified embedding space for advanced semantic search ... Read more",
+          "host_name": "ai.google.dev",
+          "rank": 2,
+          "date": "Aug 27, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://anotherwrapper.com/blog/image-generation-api",
+          "name": "Top Image Generation API in 2025 | Create Stunning Visuals",
+          "snippet": "May 16, 2025 — This article presents the top 8 image generation APIs available in 2025 . popular options like DALL-E 3, Stable Diffusion API , and Midjourney  ...",
+          "host_name": "anotherwrapper.com",
+          "rank": 3,
+          "date": "May 16, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://nordicapis.com/14-text-to-image-ai-apis",
+          "name": "14 Text-to-Image AI APIs",
+          "snippet": "Apr 2, 2024 — There are now many text-to-image APIs to choose from. Here are some top choices, from DALL·E, to Imagen, Stability AI, and others.",
+          "host_name": "nordicapis.com",
+          "rank": 4,
+          "date": "Apr 2, 2024",
+          "favicon": ""
+        },
+        {
+          "url": "https://blog.prodia.com/post/10-best-text-to-image-ai-ap-is-for-rapid-development",
+          "name": "10 Best Text to Image AI APIs for Rapid Development",
+          "snippet": "Prodia is the fastest text-to-image AI API , with an output latency of just 190 milliseconds, enabling quick image generation and inpainting. Read more",
+          "host_name": "blog.prodia.com",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://community.n8n.io/t/looking-for-an-ai-image-generator-with-api/272941?tl=en",
+          "name": "Looking for an AI image generator with API - Questions",
+          "snippet": "Mar 4, 2026 — Access the best AI models for AI chat, video, image, and music in one API. Get a free API key , Leonardo.ai is probably your best bet here, it ...",
+          "host_name": "community.n8n.io",
+          "rank": 6,
+          "date": "Mar 4, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://modelslab.com/best-ai-image-generation-api-2026",
+          "name": "Best AI Image Generation API 2026",
+          "snippet": "Send a POST request to the text-to-image endpoint with your prompt and model_id. Try Flux for photorealism, SDXL for versatility, or browse community models ... Read more",
+          "host_name": "modelslab.com",
+          "rank": 7,
+          "date": "",
+          "favicon": ""
+        }
+      ]
+    },
+    "huggingface_providers": {
+      "query": "HuggingFace Inference free providers list FLUX Stable Diffusion 2025",
+      "results": [
+        {
+          "url": "https://huggingface.co/docs/inference-providers/en/index",
+          "name": "Inference Providers",
+          "snippet": "Hugging Face's Inference Providers give developers access to hundreds of machine learning models, powered by world-class inference providers. Read more",
+          "host_name": "huggingface.co",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/LocalLLaMA/comments/1fi90kw/free_hugging_face_inference_api_now_clearly_lists",
+          "name": "Free Hugging Face Inference api now clearly lists limits +",
+          "snippet": "Free Hugging Face Inference api now clearly lists limits + models ・ 1000 req per hour + access to fancy models ・ models listed as \"warm\" ...",
+          "host_name": "www.reddit.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://huggingface.co/blog/inference-providers",
+          "name": "Welcome to Inference Providers on the Hub 🔥",
+          "snippet": "Jan 28, 2025 — Today, we are launching the integration of four awesome serverless Inference Providers – fal, Replicate, Sambanova, Together AI – directly on ...",
+          "host_name": "huggingface.co",
+          "rank": 2,
+          "date": "Jan 28, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://discuss.huggingface.co/t/api-inference-limit-changed/144157",
+          "name": "API inference limit changed? - Intermediate",
+          "snippet": "Mar 5, 2025 — I think there might have been recent changes to Hugging Face's free tier limits for inference API. end. Check and read Hugging Face's recent ...",
+          "host_name": "discuss.huggingface.co",
+          "rank": 3,
+          "date": "Mar 5, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://deepinfra.com/blog/huggingface-inference-provider",
+          "name": "DeepInfra is now a supported Hugging Face Inference",
+          "snippet": "Apr 29, 2026 — Hugging Face's Inference Providers system lets developers run inference against partner platforms without leaving the Hub. As of today, ... Read more",
+          "host_name": "deepinfra.com",
+          "rank": 4,
+          "date": "Apr 29, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://huggingface.co/docs/inference-providers/en/pricing",
+          "name": "Pricing and Billing",
+          "snippet": "Access 200+ models from leading AI inference providers . Free Users $0.10, subject to change Inference / FLUX .1-dev. As of July 2025 , hf- inference focuses mostly ...",
+          "host_name": "huggingface.co",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://discuss.huggingface.co/t/has-anyone-successfully-deployed-flux-on-hugging-face-inference-dedicated-endpoint/105886",
+          "name": "Has Anyone Successfully Deployed FLUX on Hugging",
+          "snippet": "Sep 8, 2024 — I used that guide to deploy some custom Stable Diffusion models as well. 2025 Guide/Tutorial to write an inference endpoint for custom models",
+          "host_name": "discuss.huggingface.co",
+          "rank": 6,
+          "date": "Sep 8, 2024",
+          "favicon": ""
+        },
+        {
+          "url": "https://github.com/huggingface/blog/blob/main/inference-providers-publicai.md",
+          "name": "blog/inference-providers-publicai.md at main",
+          "snippet": "You can now use the Public AI Inference Utility as an Inference Provider on Hugging Face . We're excited to see what you'll build with this new provider . Read ... Read more",
+          "host_name": "github.com",
+          "rank": 7,
+          "date": "",
+          "favicon": ""
+        }
+      ]
+    },
+    "pollinations": {
+      "query": "Pollinations.ai free image generation API documentation",
+      "results": [
+        {
+          "url": "https://pollinations.ai",
+          "name": "pollinations.ai",
+          "snippet": "Build AI apps that pay for themselves. One API for text, image , audio, video. Free Pollen from Quests to start, and earnings when your app gets used.",
+          "host_name": "pollinations.ai",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://github.com/pollinations/pollinations",
+          "name": "pollinations/pollinations: Your Friendly Open-Source Gen-",
+          "snippet": "A pure HTML/JavaScript AI generation studio with no framework dependencies. It supports image, text, audio, and video generation via the Pollinations API . Read more",
+          "host_name": "github.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://gen.pollinations.ai/docs",
+          "name": "Docs | pollinations.ai",
+          "snippet": "API docs for pollinations.ai . Generate images, text, audio, and video with easy APIs, model lists, authentication, and OpenAI-compatible endpoints.",
+          "host_name": "gen.pollinations.ai",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://pollinations.ai/play",
+          "name": "Play",
+          "snippet": "Generate images, text, audio and video with state-of-the-art AI models. Home · Play · Apps · Community · API Docs . Enable JavaScript for full functionality.",
+          "host_name": "pollinations.ai",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.freepublicapis.com/pollinations-ai",
+          "name": "🤖 Pollinations AI - Tested Every Single Day.",
+          "snippet": "Pollinations AI is an open-source platform providing simple text and image generation APIs without the need for sign-ups or API keys.",
+          "host_name": "www.freepublicapis.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://cables.gl/p/eSYYiL",
+          "name": "DEPRICATED: Pollinations.AI Image API",
+          "snippet": "Jun 10, 2025 — I created a patch to generate free AI images for your Projects with Pollinations . AI . It is a API request that outputs a picture /texture. https ... Read more",
+          "host_name": "cables.gl",
+          "rank": 5,
+          "date": "Jun 10, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/StableDiffusion/comments/1pitcz9/looking_for_a_free_pollinations_ai_alternative",
+          "name": "Looking for a free Pollinations AI alternative with unlimited",
+          "snippet": "free. allows unlimited image generations (or very high limits). super easy to use via simple URL/API calls in scripts and automation. Read more",
+          "host_name": "www.reddit.com",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://community.appinventor.mit.edu/t/ai-image-generation-using-pollinations-ai-api/111063",
+          "name": "AI Image Generation using pollinations.ai API - Extensions",
+          "snippet": "Mar 20, 2024 — A Free Ai Image Generator Extension without Api\n\nThe AI Image Generator extension empowers you to seamlessly create AI-generated images leveraging ...",
+          "host_name": "community.appinventor.mit.edu",
+          "rank": 7,
+          "date": "Mar 20, 2024",
+          "favicon": ""
+        }
+      ]
+    },
+    "general_free_apis_2025": {
+      "query": "free image generation API 2025 no API key",
+      "results": [
+        {
+          "url": "https://developer.puter.com/tutorials/free-unlimited-image-generation-api",
+          "name": "Free, Unlimited Image Generation API",
+          "snippet": "Jun 30, 2026 — This tutorial will show you how to use Puter.js to add AI image generation to your apps for free , without needing API keys or servers. Read more",
+          "host_name": "developer.puter.com",
+          "rank": 0,
+          "date": "Jun 30, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/generativeAI/comments/1t4aq4y/free_image_generation_ai_with_free_api_key_for_my",
+          "name": "free image generation ai with free api key for my",
+          "snippet": "Pollinations.ai : This is probably your best bet. It's an open-source platform that gives you access to a unified API for top models like Flux ... Read more",
+          "host_name": "www.reddit.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://github.com/saurav-z/free-image-generation-api",
+          "name": "Free AI Image Generation API using Cloudflare Workers",
+          "snippet": "This project lets you deploy your own free AI image generation API using Cloudflare Workers, with up to 100,000 API calls per day.",
+          "host_name": "github.com",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/top-free-image-generation-tools-apis-and-open-source-models",
+          "name": "Best Free AI Image Generation APIs & Open-Source",
+          "snippet": "Jul 16, 2026 — Compare the best free AI image generation APIs and open-source models in 2026 - including no-key options - by quality, speed, pricing, ...",
+          "host_name": "www.edenai.co",
+          "rank": 3,
+          "date": "Jul 16, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.pixazo.ai/api/free",
+          "name": "Free AI Image, Video & Audio Generation APIs",
+          "snippet": "Pixazo API offers free AI image generation APIs , a single API key — no credit card, no signup fee, no vendor lock-in.",
+          "host_name": "www.pixazo.ai",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://api.market/blog/astrosoft/image-generation/best-ai-Image-generation-apis",
+          "name": "7 Best AI Image Generation APIs in 2026: Pricing, Features",
+          "snippet": "Jul 15, 2026 — Is there a free AI image generation API with no key required ? Truly keyless image APIs exist, but they are rate-limited, unstable, and unsafe ...",
+          "host_name": "api.market",
+          "rank": 5,
+          "date": "Jul 15, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://deapi.ai/use-cases/text-to-image",
+          "name": "AI Image Generation API | Free Text-to-Image - deAPI.ai",
+          "snippet": "Image Generation deAPI gives you one unified API for open-source text-to-image models. Free tier available No credit card required. Generate your first images ...",
+          "host_name": "deapi.ai",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://blog.laozhang.ai/en/posts/free-ai-image-generation-api",
+          "name": "Free AI Image Generation API in 2026: What Is Actually Free?",
+          "snippet": "Mar 29, 2026 — Is there any truly free mainstream AI image generation API in 2026? Not from the major closed providers. OpenAI's GPT Image API does not support ... Read more",
+          "host_name": "blog.laozhang.ai",
+          "rank": 7,
+          "date": "Mar 29, 2026",
+          "favicon": ""
+        }
+      ]
+    },
+    "together_ai": {
+      "query": "Together AI free tier image generation FLUX",
+      "results": [
+        {
+          "url": "https://www.together.ai/models/flux-1-schnell",
+          "name": "FLUX.1 [schnell] Free API: Pricing, Benchmarks & Docs",
+          "snippet": "Free endpoint for the SOTA open-source image generation model by Black Forest Labs. This model is not available on Together's Serverless API. Related models. Read more",
+          "host_name": "www.together.ai",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.together.ai/blog/how-to-build-a-real-time-image-generator-with-together-ai",
+          "name": "How to build a real-time image generator with Flux and",
+          "snippet": "Oct 11, 2024 — BlinkShot is an app that generates images from text in real-time . It's built using Together's new Turbo endpoint for the FLUX.1 [schnell] model ... Read more",
+          "host_name": "www.together.ai",
+          "rank": 1,
+          "date": "Oct 11, 2024",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.cursor-ide.com/blog/free-flux-api-guide-2025",
+          "name": "Free Flux API Guide 2025: Access Top AI Image",
+          "snippet": "Jul 10, 2025 — Together AI now offers 3 months of completely free , unlimited access to FLUX .1. Success Rate: 98.5% generation success rate ・ access to FLUX .1 ...",
+          "host_name": "www.cursor-ide.com",
+          "rank": 2,
+          "date": "Jul 10, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.together.ai/blog/flux-tools-models-together-apis-canny-depth-image-generation",
+          "name": "Get greater control over image generation with Canny",
+          "snippet": "Nov 21, 2024 — Starting today on Together AI, you can access three powerful new image generation models from Black Forest Labs (BFL)'s FLUX Tools suite, ... Read more",
+          "host_name": "www.together.ai",
+          "rank": 3,
+          "date": "Nov 21, 2024",
+          "favicon": ""
+        },
+        {
+          "url": "https://flux-ai.io/flux-ai-image-generator",
+          "name": "Free Flux AI Image Generator: Fast, High-Quality",
+          "snippet": "Flux AI Image Generator delivers robust consistency, generation precision, and deep semantic understanding for demanding creative tasks. Stable Results. Read more",
+          "host_name": "flux-ai.io",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://flux-context.org",
+          "name": "Flux Context: Flux AI | All-in-One AI Generator",
+          "snippet": "Create with Flux AI in one all-in-one AI generator for images, video, music, and editing. Use FLUX Kontext, Seedream, Veo, Sora, Kling, Wan and more.",
+          "host_name": "flux-context.org",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.fluxpro.ai",
+          "name": "Flux AI Online Free - Flux.1 AI Image Generator",
+          "snippet": "Flux AI generates high-quality images in seconds , significantly faster than Stable Diffusion 3 and Midjourney. Unparalleled Quality. The advanced Flux AI model ... Read more",
+          "host_name": "www.fluxpro.ai",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.together.ai/blog/flux-api-is-now-available-on-together-ai-new-pro-free-access-to-flux-schnell",
+          "name": "New FLUX1.1 [pro] and free access to FLUX.1 [schnell]",
+          "snippet": "Mar 10, 2024 — Together AI, which generates images six times faster than FLUX.1 [pro] while also improving image quality, prompt adherence, and diversity.",
+          "host_name": "www.together.ai",
+          "rank": 7,
+          "date": "Mar 10, 2024",
+          "favicon": ""
+        }
+      ]
+    },
+    "cloudflare": {
+      "query": "Cloudflare Workers AI free image generation FLUX models",
+      "results": [
+        {
+          "url": "https://developers.cloudflare.com/workers-ai/models",
+          "name": "Workers AI Models",
+          "snippet": "Aug 12, 2026 — FLUX.2 [dev ] is an image model from Black Forest Labs where you can generate highly realistic and detailed images, with multi-reference support. Read more",
+          "host_name": "developers.cloudflare.com",
+          "rank": 0,
+          "date": "Aug 12, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://developers.cloudflare.com/workers-ai/guides/tutorials/image-generation-playground/image-generator-flux",
+          "name": "Build an AI Image Generator Playground (Part 1)",
+          "snippet": "Oct 13, 2025 — The new flux models on Workers AI are our most powerful text-to-image AI models yet. Using Workers AI, you can get access to the best models ...",
+          "host_name": "developers.cloudflare.com",
+          "rank": 1,
+          "date": "Oct 13, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.cloudflare.com/products/workers-ai",
+          "name": "Cloudflare Workers AI - Edge AI Inference Platform",
+          "snippet": "Generate images from your Worker using AI models . from LLMs to image generation and embeddings. Catalog of 50+ Ready-to-Use Models",
+          "host_name": "www.cloudflare.com",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://github.com/open-webui/open-webui/discussions/21404",
+          "name": "Image generation and Image edits using cloudflare",
+          "snippet": "Supports both image generation and image editing out of the box; 10 models available: FLUX .1 Schnell, FLUX .2 Dev, Leonardo, and more; Images are stored on ... Read more",
+          "host_name": "github.com",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://developers.cloudflare.com/workers-ai/platform/pricing",
+          "name": "Pricing · Cloudflare Workers AI docs",
+          "snippet": "1 day ago — Workers AI is included in both the Free and Paid Workers plans and is priced at $0.011 per 1,000 Neurons. Our free allocation allows anyone ... Read more",
+          "host_name": "developers.cloudflare.com",
+          "rank": 4,
+          "date": "Aug 29, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/top-free-image-generation-tools-apis-and-open-source-models",
+          "name": "Best Free AI Image Generation APIs & Open-Source",
+          "snippet": "Jul 16, 2026 — Cloudflare Workers AI is the best free option for. Workers AI is one of the best free image generation APIs. FLUX 1.1 Pro starts at $0.04 per  ...",
+          "host_name": "www.edenai.co",
+          "rank": 5,
+          "date": "Jul 16, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell",
+          "name": "flux-1-schnell (Black Forest Labs)",
+          "snippet": "FLUX.1 [schnell ] is a 12 billion parameter rectified flow transformer capable of generating images from text descriptions.",
+          "host_name": "developers.cloudflare.com",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://blog.cloudflare.com/flux-2-workers-ai",
+          "name": "Partnering with Black Forest Labs to bring FLUX.2 -dev",
+          "snippet": "Nov 25, 2025 — FLUX.2 [dev] by Black Forest Labs is now on Workers AI ! This advanced open-weight image model offers superior photorealism, multi-reference ...",
+          "host_name": "blog.cloudflare.com",
+          "rank": 7,
+          "date": "Nov 25, 2025",
+          "favicon": ""
+        }
+      ]
+    },
+    "fal_ai": {
+      "query": "fal.ai free credits image generation quota",
+      "results": [
+        {
+          "url": "https://fal.ai/pricing",
+          "name": "GenAI API Pricing: Haliuo, Vidu, Pixverse | Pay-Per-Use",
+          "snippet": "fal offers a simple pricing model for developers to generate media with AI . Get started with a free tier … low as $1.89/hr for H100. Image models are billed by ...",
+          "host_name": "fal.ai",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://fal.ai/docs/documentation/model-apis/pricing",
+          "name": "Pricing",
+          "snippet": "Image generation models typically charge per image or per megapixel of output, where higher resolutions cost proportionally more. Image generation Per image or",
+          "host_name": "fal.ai",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://fal.ai",
+          "name": "Generative AI | Run Image, Video, 3D and Audio Models | fal",
+          "snippet": "“ fal currently powers 40% of Poe's official image and video generation bots. The fal team is one of the fastest-moving organizations we work with and ... Read more",
+          "host_name": "fal.ai",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://wavespeed.ai/blog/posts/fal-ai-review-2026",
+          "name": "fal.ai vs WaveSpeedAI: An Honest Side-by-Side for 2026",
+          "snippet": "Mar 16, 2026 — We give every new account free credits to test any model, with no expiry pressure on initial exploration. fal also offers promotional credits — ... Read more",
+          "host_name": "wavespeed.ai",
+          "rank": 3,
+          "date": "Mar 16, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/StableDiffusion/comments/1p6y8on/freepik_vs_falai_which_is_cheaper_for_generating",
+          "name": "Freepik vs Fal.ai which is cheaper for generating a long",
+          "snippet": "Fal.ai charges per second depending on the model ($0.04–$0.20+ per generated second). you get unlimited credit-free usage for some models ...",
+          "host_name": "www.reddit.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.vadoo.tv/fal-ai",
+          "name": "Fal AI - Advanced AI Image & Video Generator",
+          "snippet": "Fal AI Free Plan – Includes limited API calls and free credits to test AI models. Start generating AI images and videos using the free credits available.",
+          "host_name": "www.vadoo.tv",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://fal.ai/learn/tools/ai-image-generators",
+          "name": "10 Best AI Image Generators in 2026",
+          "snippet": "Mar 5, 2026 — For image generation specifically, pricing starts at $0.003 per megapixel for FLUX.1 up to $0.15 per image . No hidden fees for API calls, ...",
+          "host_name": "fal.ai",
+          "rank": 6,
+          "date": "Mar 5, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.cometapi.com/vs/fal-ai",
+          "name": "CometAPI vs Fal.ai",
+          "snippet": "Fal.ai offers $20 trial credits on sign-up , but not a permanent free tier. Production usage is pay-per-use, so check current account terms before estimating ... Read more",
+          "host_name": "www.cometapi.com",
+          "rank": 7,
+          "date": "",
+          "favicon": ""
+        }
+      ]
+    },
+    "replicate": {
+      "query": "Replicate free credits image generation new account",
+      "results": [
+        {
+          "url": "https://replicate.com/collections/try-for-free",
+          "name": "Try free AI models to generate images, videos, and more",
+          "snippet": "Explore Replicate's \"Try for Free\" collection. Access top AI models for video generation, image creation, and photo restoration without a credit card.",
+          "host_name": "replicate.com",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://replicate.com/home",
+          "name": "Replicate - Run AI with an API",
+          "snippet": "OpenAI's state-of-the-art image generation model. Create and edit images from text with strong instruction following, sharp text rendering, and detailed editing ...",
+          "host_name": "replicate.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/StableDiffusion/comments/1b8b2hr/can_i_use_replicatecom_for_commercial_use",
+          "name": "Can I use replicate.com for commercial use?",
+          "snippet": "Am I allowed to use the images generated by replicate.com‘s so-called playground? The first thing that comes up when going on replicate.com is ...",
+          "host_name": "www.reddit.com",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://creditforstartups.com/companies/replicate",
+          "name": "Replicate Startup Credits & Perks",
+          "snippet": "Replicate provides up to $10,000 in credits and resources with no equity required. How do I apply for Replicate? 1) Create an account and API token, 2) Submit ...",
+          "host_name": "creditforstartups.com",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://guptadeepak.com/startup-offers/programs/replicate-startups",
+          "name": "Replicate Startup Credits",
+          "snippet": "Replicate Startup Credits offers up to $1K–$10K in credits to bootstrapped, pre-seed, seed startups, no VC referral required. Review takes 3–14 business days.",
+          "host_name": "guptadeepak.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://checkthat.ai/brands/replicate/pricing",
+          "name": "Replicate Pricing 2026: Plans, Costs & What You'll Pay",
+          "snippet": "May 13, 2026 — There's no permanent free tier or ongoing monthly credits like Modal's $30/month. Instead, new accounts can run a limited number of free ...",
+          "host_name": "checkthat.ai",
+          "rank": 5,
+          "date": "May 13, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://replicate.com/collections/text-to-image",
+          "name": "Run image generation models via API",
+          "snippet": "Run popular models like Stable Diffusion & FLUX to turn text prompts into stunning AI images & art. Just describe your idea to generate realistic visuals.",
+          "host_name": "replicate.com",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        }
+      ]
+    },
+    "leonardo": {
+      "query": "Leonardo.ai free API image generation tokens",
+      "results": [
+        {
+          "url": "https://leonardo.ai/api",
+          "name": "AI Image & Video Generation API for Developers",
+          "snippet": "Leonardo is a visual-first AI image generator API . You'll need a free Leonardo account to get started. receive $5 in free API credit to try your first ...",
+          "host_name": "leonardo.ai",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://leonardo.ai/pricing",
+          "name": "Leonardo.Ai Pricing: Individual, Team & API Plans",
+          "snippet": "Leonardo.Ai Tokens are effectively your “currency” These tokens let you generate images, create videos, and use other advanced features. Once that pool runs ...",
+          "host_name": "leonardo.ai",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://intercom.help/leonardo-ai/en/articles/8044033-token-usage",
+          "name": "Token Usage | Leonardo.Ai Help Center",
+          "snippet": "5 days ago — Understanding Token Costs for Image Generation Features ; Image guidance ( free ). 1 Token . 4 Tokens ; Image guidance x2 reference images (premium). Read more",
+          "host_name": "intercom.help",
+          "rank": 2,
+          "date": "Aug 25, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/leonardo-ai-image-generation-feature-is-available-on-eden-ai",
+          "name": "Leonardo.Ai's Image Generation API available",
+          "snippet": "May 22, 2026 — Leonardo.Ai allows users to generate stunning images from text prompts, enhance existing artwork, and customize outputs to align with specific ...",
+          "host_name": "www.edenai.co",
+          "rank": 3,
+          "date": "May 22, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://github.com/wwakabobik/leonardo_api",
+          "name": "wwakabobik/leonardo_api: Leonardo.ai API",
+          "snippet": "This package contains Python API for Leonardo . ai . API provides access to Leonardo API ・ create an API access token ・ provided by Leonardo . ai API , info and  ...",
+          "host_name": "github.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.eesel.ai/blog/leonardo-ai-pricing",
+          "name": "Leonardo.AI pricing 2026: plans, tokens, and the real cost",
+          "snippet": "Jun 5, 2026 — API begins at a $5 starter credit with no expiry. Free, $0/month You get 150 Fast Tokens per day, no rollover, and access to the basic quality ...",
+          "host_name": "www.eesel.ai",
+          "rank": 5,
+          "date": "Jun 5, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.facebook.com/groups/leonardoaigroup/posts/2246900945695716",
+          "name": "How many images can be generated with Leonardo ai",
+          "snippet": "Leonardo AI is a FREE AI image generation application that allows you to type in text prompts and it generates images or artwork based on ... Read more",
+          "host_name": "www.facebook.com",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.qwe.edu.pl/tutorial/how-to-use-leonardo-ai-for-image-generation",
+          "name": "How to Use Leonardo AI: Skip the Tutorial Loop & Start Fast",
+          "snippet": "Mar 30, 2026 — Leonardo AI gives you 150 free daily tokens , Leonardo AI: you can generate your first image in under 60 seconds, or spend 20 minutes adjusting ...",
+          "host_name": "www.qwe.edu.pl",
+          "rank": 7,
+          "date": "Mar 30, 2026",
+          "favicon": ""
+        }
+      ]
+    },
+    "runway": {
+      "query": "Runway free image generation API endpoint",
+      "results": [
+        {
+          "url": "https://docs.dev.runwayml.com",
+          "name": "Runway Dev: API Documentation",
+          "snippet": "Access complete Runway Dev documentation . Find guides, references and resources to integrate AI video generation into your applications and products.",
+          "host_name": "docs.dev.runwayml.com",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://dev.runwayml.com",
+          "name": "Runway Developer Portal",
+          "snippet": "Deploy the best media models, generation workflows and interactive avatars through a single integration — with the visibility and controls to build at scale. Read more",
+          "host_name": "dev.runwayml.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://runway.com/news/introducing-runway-api-for-gen-4-images",
+          "name": "Runway News | Introducing the Gen-4 Image API",
+          "snippet": "May 16, 2025 — The Gen-4 Image API costs $0.08 per generated image . To learn more and get started, visit runway.com/API. Clone the repo and try it out here.",
+          "host_name": "runway.com",
+          "rank": 2,
+          "date": "May 16, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://runware.ai",
+          "name": "Runware | One API for all AI",
+          "snippet": "Image generation & editing. Every popular image model on one endpoint . Open source like Flux and Stable Diffusion sit beside the frontier closed-source ... Read more",
+          "host_name": "runware.ai",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://aimlapi.com/runway-ai-api",
+          "name": "Create Dynamic Videos with Runway AI API",
+          "snippet": "Image-to-Video Magic. Simply upload your images, input a prompt, and watch Runway AI do the magic . No need for extensive video editing skills. Read more",
+          "host_name": "aimlapi.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/runwayml/comments/1gzeohm/any_apis_to_generate_videos",
+          "name": "Any API's to generate videos? : r/runwayml",
+          "snippet": "Hi there, I quickly need API to launch my product. Please give me any reliable options. Currently Runway only got video from image api.",
+          "host_name": "www.reddit.com",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://useapi.net/docs/api-runwayml-v1",
+          "name": "Runway API v1 | Experimental API for AI services",
+          "snippet": "The Images is a unified image generation endpoint supporting 12 AI models: text-to-image and reference image workflows. Subscription Plan Standard monthly - $ ...",
+          "host_name": "useapi.net",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://kie.ai/features/gen4-turbo-api",
+          "name": "Power Your Apps with Runway Gen-4 Turbo API",
+          "snippet": "Use our RESTful API endpoints , with full documentation and SDKs for popular languages, to upload images, set prompts, and generate videos directly within your ... Read more",
+          "host_name": "kie.ai",
+          "rank": 7,
+          "date": "",
+          "favicon": ""
+        }
+      ]
+    },
+    "eden_ai": {
+      "query": "Eden AI free image generation API gateway",
+      "results": [
+        {
+          "url": "https://www.edenai.co/feature/image-generation-apis",
+          "name": "Image Generation API",
+          "snippet": "Transform your projects with our Image Generation API! Create stunning visuals from text prompts. Explore advanced, scalable AI image generation today!",
+          "host_name": "www.edenai.co",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/top-free-generative-ai-apis-and-open-source-models",
+          "name": "Best Free AI APIs and Open-Source AI Models in 2026",
+          "snippet": "Jul 29, 2026 — Eden AI's self-serve API Gateway gives access to hundreds of models through one unified API, with no subscription, no hidden costs, and no API ...",
+          "host_name": "www.edenai.co",
+          "rank": 1,
+          "date": "Jul 29, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/top-free-image-generation-tools-apis-and-open-source-models",
+          "name": "Best Free AI Image Generation APIs & Open-Source",
+          "snippet": "Jul 16, 2026 — Eden AI with your existing tools, frameworks, and automation platforms to build AI-powered workflows faster. A free AI image generation API is ...",
+          "host_name": "www.edenai.co",
+          "rank": 2,
+          "date": "Jul 16, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co",
+          "name": "Eden AI | One API to Route Best AI Models",
+          "snippet": "Access 500+ LLMs and expert AI models through one unified API. Route requests by cost, performance, and region with built-in smart routing and fallbacks.",
+          "host_name": "www.edenai.co",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/how-to-generate-an-image-with-ai",
+          "name": "How to generate images with AI?",
+          "snippet": "May 21, 2026 — Step 1. Access the Eden AI API · Step 2. Choose the right Image Generation provider · Step 3. Compare the images you get from the different models. Read more",
+          "host_name": "www.edenai.co",
+          "rank": 4,
+          "date": "May 21, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/best-generative-ai-apis",
+          "name": "Best Generative AI APIs in 2026",
+          "snippet": "Jun 20, 2026 — Replicate's Image Generation API enables developers to create AI-driven images with features like text-to-image generation, model variety ... Read more",
+          "host_name": "www.edenai.co",
+          "rank": 5,
+          "date": "Jun 20, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/docs/v3/overview/ai-gateway",
+          "name": "What is an AI Gateway? - Eden AI Documentation",
+          "snippet": "Eden AI is a unified AI gateway that gives you access to 500+ AI models from 50+ providers through a single API. Get your API key from the Eden AI dashboard. ...",
+          "host_name": "www.edenai.co",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://aws.amazon.com/marketplace/pp/prodview-2pxlpnzwtx6zs",
+          "name": "AWS Marketplace: AI / LLM Gateway - Amazon.com",
+          "snippet": "Eden AI is a unified AI API gateway that helps developers and enterprises access, compare, and orchestrate multiple AI models and AI providers through a ...",
+          "host_name": "aws.amazon.com",
+          "rank": 7,
+          "date": "",
+          "favicon": ""
+        }
+      ]
+    },
+    "segmind": {
+      "query": "Segmind free image generation API tier",
+      "results": [
+        {
+          "url": "https://segmind.com/pricing",
+          "name": "Flexible AI Model Plans & API Pricing",
+          "snippet": "Choose from flexible pricing plans for AI models and APIs. Free tier available , pay-as-you-go credits, dedicated endpoints, fine-tuning, and enterprise ...",
+          "host_name": "segmind.com",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.segmind.com/pixelflows/ai-copyright-free-image-generator/pixelflow",
+          "name": "AI Copyright Free Image Generator with Flux.1",
+          "snippet": "Segmind is a developer platform with APIs. Generate 100% copyright-free images with Flux.1 — safe for commercial use with no licensing restrictions.",
+          "host_name": "www.segmind.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.segmind.com/models/all/best-image-models",
+          "name": "Best AI Image Generation Models",
+          "snippet": "Compare the best AI image generation models — FLUX, SD3, Ideogram, Recraft , and more — via a single pay-per-use API on Segmind.",
+          "host_name": "www.segmind.com",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://blog.segmind.com",
+          "name": "Automagically | Generative AI Blog by Segmind",
+          "snippet": "Google's fastest, cheapest Gemini image model: 4-second images at $0.042 on Segmind . What it does, API code, and real outputs. Real per- image pricing,",
+          "host_name": "blog.segmind.com",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/top-free-image-generation-tools-apis-and-open-source-models",
+          "name": "Best Free AI Image Generation APIs & Open-Source",
+          "snippet": "Jul 16, 2026 — Free tier: $5 in free API credit at signup , non-expiring. Pricing: Pay-as-you-go pricing based on the model and generation settings. Google ... Read more",
+          "host_name": "www.edenai.co",
+          "rank": 4,
+          "date": "Jul 16, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/googlecloud/comments/1kwo4wz/is_image_generation_using_api_free",
+          "name": "Is image generation using API free? : r/googlecloud",
+          "snippet": "I'm usingfrom google import genaimodel=\"imagen-4.0-generate-preview-05-20\"\n\nto generate images using Google API. I don't see any charges in the Billing ...",
+          "host_name": "www.reddit.com",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://sacra.com/c/segmind",
+          "name": "Segmind funding & analysis | Sacra",
+          "snippet": "The serverless API tier charges per GPU-second of compute time, with rates like $0.0108 per second for image generation models, ranging from a free tier",
+          "host_name": "sacra.com",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://blog.segmind.com/best-free-ai-models",
+          "name": "Top Free AI Models for 2025: Open-Source & API Picks",
+          "snippet": "Dec 11, 2025 — Segmind simplifies the process by offering over 500 models. Free-tier access is available for many models ,",
+          "host_name": "blog.segmind.com",
+          "rank": 7,
+          "date": "Dec 11, 2025",
+          "favicon": ""
+        }
+      ]
+    },
+    "dezgo": {
+      "query": "Dezgo free image generation API pricing",
+      "results": [
+        {
+          "url": "https://dezgo.com",
+          "name": "Frequently Asked Questions",
+          "snippet": "Yes, there is a free version of Dezgo that you can use without registering. Pricing-wise, the API is identical to Power Mode: requests cost the same amount, ...",
+          "host_name": "dezgo.com",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://pollo.ai",
+          "name": "Discover Dezgo AI Image Generator",
+          "snippet": "Dezgo offers an API for AI image generation, image editing, background removal, and upscaling. Its API monthly fees .",
+          "host_name": "pollo.ai",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.fahimai.com",
+          "name": "Dezgo AI Review 2026: Free AI Art — Worth It?",
+          "snippet": "Feb 20, 2026 — You get real AI image generation at zero cost . For Power Mode, $10 gets you thousands of images. The free tier is plenty for most casual users. ...",
+          "host_name": "www.fahimai.com",
+          "rank": 2,
+          "date": "Feb 20, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://dev.dezgo.com",
+          "name": "Overview - AI Image Generator API - Flux/Stable Diffusion",
+          "snippet": "You can use the pricing calculator on Dezgo.com to calculate the cost of your requests in realtime with different values.",
+          "host_name": "dev.dezgo.com",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://api.market",
+          "name": "7 Best AI Image Generation APIs in 2026: Pricing, Features",
+          "snippet": "Jul 15, 2026 — Low-Cost Image Generate API: 10 free API units to start , then the Pro plan at $5.00 per month for 2,000 units across four endpoints. Ultra Low ... Read more",
+          "host_name": "api.market",
+          "rank": 4,
+          "date": "Jul 15, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://pictory.ai",
+          "name": "Create with Dezgo AI Image Generator",
+          "snippet": "Apr 3, 2024 — Yes, Dezgo offers a free version for creating images without any cost, and users can upgrade to Dezgo's Power Mode for more advanced features. Read more",
+          "host_name": "pictory.ai",
+          "rank": 5,
+          "date": "Apr 3, 2024",
+          "favicon": ""
+        }
+      ]
+    },
+    "craiyon": {
+      "query": "Craiyon free image generation API endpoint 2025",
+      "results": [
+        {
+          "url": "https://www.craiyon.com/en",
+          "name": "Craiyon: Free AI Image Generator",
+          "snippet": "Free AI Image Generator . Create free AI images from text for art, photos, illustrations, and quick visual ideas. Input icon Reference. Read more",
+          "host_name": "www.craiyon.com",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/top-free-image-generation-tools-apis-and-open-source-models",
+          "name": "Best Free AI Image Generation APIs & Open-Source",
+          "snippet": "Jul 16, 2026 — Compare the best free AI image generation APIs and open-source models in 2026 - including no-key options - by quality, speed, pricing, ...",
+          "host_name": "www.edenai.co",
+          "rank": 1,
+          "date": "Jul 16, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/n8n/comments/1ryt50t/free_image_generation_api",
+          "name": "Free image generation api : r/n8n",
+          "snippet": "12 votes, 43 comments. Hello everyone, I've built a n8n workflow which generates 5 different creatives for product ads I'm using http node ...",
+          "host_name": "www.reddit.com",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.postman.com/postman/fun-apis-only/collection/7s6frfu/1-craiyon-ai-image-generation",
+          "name": "1. Craiyon - AI image generation | Fun APIs only",
+          "snippet": "Craiyon - AI image generation . Fun with OpenAI and Suno.ai (create music and images for your favorite company or sprots club)",
+          "host_name": "www.postman.com",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.facebook.com/groups/n8ndevelopers/posts/1716048312310458",
+          "name": "What free AI image generator APIs are available for n8n",
+          "snippet": "5) CRAIYON formerly called DALL-E mini. It was developed by researchers at Google and Hugging Face for generating unique images for free. Read more",
+          "host_name": "www.facebook.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://api.market/blog/astrosoft/image-generation/best-ai-Image-generation-apis",
+          "name": "7 Best AI Image Generation APIs in 2026: Pricing, Features",
+          "snippet": "Jul 15, 2026 — Low-Cost Image Generate API : 10 free API units to start, then the Pro plan at $5.00 per month for 2,000 units across four endpoints . Ultra Low ... Read more",
+          "host_name": "api.market",
+          "rank": 5,
+          "date": "Jul 15, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://community.n8n.io/t/looking-for-an-ai-image-generator-with-api/272941?tl=en",
+          "name": "Looking for an AI image generator with API - Questions",
+          "snippet": "Mar 4, 2026 — Access the best AI models for AI chat, video, image, and music in one API. Get a free API key , stable performance, and pricing lower than ... Read more",
+          "host_name": "community.n8n.io",
+          "rank": 6,
+          "date": "Mar 4, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://anotherwrapper.com/blog/image-generation-api",
+          "name": "Top Image Generation API in 2025 | Create Stunning Visuals",
+          "snippet": "May 16, 2025 — Need to quickly generate images for your project? This article presents the top 8 image generation APIs available in 2025 . Read more",
+          "host_name": "anotherwrapper.com",
+          "rank": 7,
+          "date": "May 16, 2025",
+          "favicon": ""
+        }
+      ]
+    },
+    "blackforestlabs": {
+      "query": "Black Forest Labs BFL API free credits FLUX.1",
+      "results": [
+        {
+          "url": "https://bfl.ai",
+          "name": "Black Forest Labs - Frontier AI Lab",
+          "snippet": "Use FLUX models via our API. Simple-to-integrate API to access the latest and most powerful FLUX models. Download our models, customize, and deploy anywhere.",
+          "host_name": "bfl.ai",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://bfl.ai/pricing",
+          "name": "Pricing",
+          "snippet": "FLUX API pricing and plans . all Black Forest Labs image generation models. No subscriptions, no seat fees. Only pay for what you generate.",
+          "host_name": "bfl.ai",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://bfl.ai/play",
+          "name": "Frontier AI Lab",
+          "snippet": "Amazing AI models from the Black Forest . Trusted by the world's leading creative teams. Adobe Microsoft Mistral Magnific Picsart",
+          "host_name": "bfl.ai",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://developer.puter.com/tutorials/how-to-get-flux-api-key",
+          "name": "How to Get a FLUX (Black Forest Labs) API Key: A Step-by-",
+          "snippet": "Jun 26, 2026 — To get a FLUX API key: sign up at dashboard. bfl .ai, add a payment method, then go to Keys under the API group and click Add Key. From there you ... Read more",
+          "host_name": "developer.puter.com",
+          "rank": 3,
+          "date": "Jun 26, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://docs.bfl.ml/quick_start/pricing",
+          "name": "Overview",
+          "snippet": "Credit-based pricing for all FLUX models including FLUX 3, FLUX.2, FLUX.1, and batch requests. 1 credit equals $0.01 USD . no charge applies.",
+          "host_name": "docs.bfl.ml",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.cometapi.com/black-forest-labs-launches-flux-1-kontext",
+          "name": "Black Forest Labs Launches FLUX.1 Kontext",
+          "snippet": "May 29, 2025 — Kontext is accessible through the BFL API … grants new users 200 free credits (approximately 12 pro-model generations) without requiring third- ...",
+          "host_name": "www.cometapi.com",
+          "rank": 5,
+          "date": "May 29, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://bfl.ai/legal/terms-of-service",
+          "name": "Website and FLUX Terms of Service",
+          "snippet": "Aug 1, 2026 — Fees for the Services are charged on a pay-per-use basis through the purchase of service credits , as further described at bfl .ai/pricing. Read more",
+          "host_name": "bfl.ai",
+          "rank": 6,
+          "date": "Aug 1, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://github.com/black-forest-labs/flux",
+          "name": "black-forest-labs/flux: Official inference repo for FLUX.1",
+          "snippet": "API usage . Our API offers access to all models including our Pro tier non-open weight models. Check out our API documentation docs.bfl.ai to learn more. Read more",
+          "host_name": "github.com",
+          "rank": 7,
+          "date": "",
+          "favicon": ""
+        }
+      ]
+    },
+    "novita": {
+      "query": "Novita AI free image generation API key",
+      "results": [
+        {
+          "url": "https://novita.ai/docs/guides/quickstart",
+          "name": "Novita AI Get started",
+          "snippet": "Novita AI authenticates API access using Bearer authentication with an API Key . Key Management setting page to create or manage your keys, and see API Keys for ...",
+          "host_name": "novita.ai",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://novita.ai/docs/guides/llm-api",
+          "name": "Enhanced OpenAI-Compatible Language Models for",
+          "snippet": "Novita AI provides fast, reliable APIs for open-source models, get and set your API key , For how to create, store, and use an API key, see API Keys.",
+          "host_name": "novita.ai",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://blogs.novita.ai",
+          "name": "Novita AI Blog - AI-Native Cloud for Builders and Agents",
+          "snippet": "Free AI Image Generation API Without an API Key . Compare the real no-signup image generation APIs — Pollinations and Puter.js — with a copy-paste code sample, ... Read more",
+          "host_name": "blogs.novita.ai",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://novita.ai/docs/api-reference/api-reference-overview",
+          "name": "API Reference Overview - Documentation",
+          "snippet": "This documentation provides comprehensive reference for all Novita AI APIs . Image, Audio and Video APIs for content generation and editing. Include your API ...",
+          "host_name": "novita.ai",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/top-free-image-generation-tools-apis-and-open-source-models",
+          "name": "Best Free AI Image Generation APIs & Open-Source",
+          "snippet": "Jul 16, 2026 — Compare the best free AI image generation APIs and open-source models in 2026 - including no-key options - by quality, speed, pricing, ...",
+          "host_name": "www.edenai.co",
+          "rank": 4,
+          "date": "Jul 16, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://marketplace.dify.ai/plugin/langgenius/novitaai",
+          "name": "Novita AI",
+          "snippet": "Jul 22, 2026 — Get a Novita AI API Key Go the Novita AI API page, create a new API Key, and ensure your account has the necessary permissions to access its ...",
+          "host_name": "marketplace.dify.ai",
+          "rank": 5,
+          "date": "Jul 22, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://futuretools.io/tools/novita-ai",
+          "name": "novita.ai",
+          "snippet": "Novita API offers access to over 100 APIs and 10,000+ models for AI image generation, editing, and more. Freemium API Available Open source. This tool offers a ...",
+          "host_name": "futuretools.io",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://lobehub.com/docs/usage/providers/novita",
+          "name": "Using Novita AI API Key in LobeHub ·",
+          "snippet": "Visit Novita.ai and create an account · You can sign in using your Google or GitHub account · Upon registration, Novita AI grants you $0.50 in free credits . Read more",
+          "host_name": "lobehub.com",
+          "rank": 7,
+          "date": "",
+          "favicon": ""
+        }
+      ]
+    },
+    "glif": {
+      "query": "Glif API free image generation endpoint",
+      "results": [
+        {
+          "url": "https://www.edenai.co/post/top-free-image-generation-tools-apis-and-open-source-models",
+          "name": "Best Free AI Image Generation APIs & Open-Source",
+          "snippet": "Jul 16, 2026 — A free image generation API is a hosted service that allows developers to generate , edit, or transform images by sending requests to an external ... Read more",
+          "host_name": "www.edenai.co",
+          "rank": 0,
+          "date": "Jul 16, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/n8n/comments/1ryt50t/free_image_generation_api",
+          "name": "Free image generation api : r/n8n",
+          "snippet": "Free image generation api . Help. Hello everyone, I've built a n8n workflow which generates 5 different creatives for product ads I'm using ... Read more",
+          "host_name": "www.reddit.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://glif.app/use-cases/image-generator",
+          "name": "Free AI Image Generator — Text to Image in Seconds",
+          "snippet": "Generate photorealistic images, AI art, product photos & more from text . Access Flux 2, GPT Image 2, Gemini & every top model in one place. Free to start.",
+          "host_name": "glif.app",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://api.market/blog/astrosoft/image-generation/best-ai-Image-generation-apis",
+          "name": "7 Best AI Image Generation APIs in 2026: Pricing, Features",
+          "snippet": "Jul 15, 2026 — Low-Cost Image Generate API : 10 free API units to start, then the Pro plan at $5.00 per month for 2,000 units across four endpoints . Ultra Low ... Read more",
+          "host_name": "api.market",
+          "rank": 3,
+          "date": "Jul 15, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://github.com/saurav-z/free-image-generation-api",
+          "name": "Free AI Image Generation API using Cloudflare Workers",
+          "snippet": "This project lets you deploy your own free AI image generation API using Cloudflare Workers, with up to 100,000 API calls per day.",
+          "host_name": "github.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://openrouter.ai/docs/guides/overview/multimodal/image-generation",
+          "name": "OpenRouter Image Generation - Complete Documentation",
+          "snippet": "OpenRouter provides a dedicated Image API for generating images from text prompts. The API covers model discovery, per- endpoint capabilities, and generation .",
+          "host_name": "openrouter.ai",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.answeroverflow.com/m/1470805166826717286",
+          "name": "image generation - OpenClaw",
+          "snippet": "Feb 10, 2026 — With an API , OpenClaw can generate images and send them to Telegram/Discord easily via a skill. /tmp/out.png exists, you're done with the “ free ...",
+          "host_name": "www.answeroverflow.com",
+          "rank": 6,
+          "date": "Feb 10, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://community.n8n.io/t/looking-for-an-ai-image-generator-with-api/272941?tl=en",
+          "name": "Looking for an AI image generator with API - Questions",
+          "snippet": "Mar 4, 2026 — Leonardo.ai is probably your best bet here, it has a proper API with reference image support and you can lock in a consistent style across ...",
+          "host_name": "community.n8n.io",
+          "rank": 7,
+          "date": "Mar 4, 2026",
+          "favicon": ""
+        }
+      ]
+    },
+    "prodia": {
+      "query": "Prodia free image generation API no key documentation",
+      "results": [
+        {
+          "url": "https://prodia.com",
+          "name": "Prodia — AI Image & Video Generation API | Fastest Open",
+          "snippet": "AI image and video generation API from $0.001/generation. 50+ open source and closed source models including FLUX, Recraft, Wan, and Veo. 190ms latency.",
+          "host_name": "prodia.com",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://blog.prodia.com/post/10-free-image-generator-ap-is-for-efficient-development-solutions",
+          "name": "10 Free Image Generator APIs for Efficient Development",
+          "snippet": "Prodia is a high-performance image generation API known for being the fastest free image generator globally, with an ultra-low latency of just 190 milliseconds, ... Read more",
+          "host_name": "blog.prodia.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://prodia.readme.io/reference/generate",
+          "name": "Create a generation",
+          "snippet": "Use this endpoint to start generating an image on Prodia . start generating an image on Prodia. Invalid Generation Parameters 401 Key Not Recognised curl",
+          "host_name": "prodia.readme.io",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://blog.prodia.com/post/generate-image-ai-free-a-step-by-step-guide-with-prodia",
+          "name": "Generate Image AI Free: A Step-by-Step Guide with Prodia",
+          "snippet": "To implement Prodia's API , users must sign up, obtain an API key , and follow specific coding steps to generate images . Common issues include invalid API keys ,",
+          "host_name": "blog.prodia.com",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/n8n/comments/1ryt50t/free_image_generation_api",
+          "name": "Free image generation api : r/n8n",
+          "snippet": "Comments Section ; NerdButtons · So you now use nano banana pro? ; Cityslicker100200 · But very slow it takes years ; srch4aheartofgold · Tell me more ... Read more",
+          "host_name": "www.reddit.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.edenai.co/post/top-free-image-generation-tools-apis-and-open-source-models",
+          "name": "Best Free AI Image Generation APIs & Open-Source",
+          "snippet": "Jul 16, 2026 — Compare the best free AI image generation APIs and open-source models in 2026 - including no-key options - by quality, speed, pricing, ...",
+          "host_name": "www.edenai.co",
+          "rank": 5,
+          "date": "Jul 16, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://blog.prodia.com/post/10-best-ai-image-generation-ap-is-for-developers-in-2025",
+          "name": "10 Best AI Image Generation APIs for Developers in 2025",
+          "snippet": "Prodia offers the fastest AI image generation API with a latency of 190 milliseconds, ideal for rapid development cycles. no financial commitment required,",
+          "host_name": "blog.prodia.com",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://dang.ai/tool/ai-image-generation-tool-prodia",
+          "name": "AI Image Generation Tool - Prodia",
+          "snippet": "Aug 4, 2023 — To integrate Prodia's image generation API, sign up to get a free API key , Refer to the docs for language-specific code examples.",
+          "host_name": "dang.ai",
+          "rank": 7,
+          "date": "Aug 4, 2023",
+          "favicon": ""
+        }
+      ]
+    },
+    "automa_api": {
+      "query": "free image generation REST API curl 2025",
+      "results": [
+        {
+          "url": "https://ai.google.dev/gemini-api/docs/image-generation",
+          "name": "Nano Banana image generation - Interactions API",
+          "snippet": "4 days ago — Get started generating images with the Gemini API using Nano Banana and Nano Banana Pro. API pricing. All generated images include a SynthID ...",
+          "host_name": "ai.google.dev",
+          "rank": 0,
+          "date": "Aug 26, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://wavespeed.ai/blog/posts/complete-guide-ai-image-apis-2026",
+          "name": "Complete Guide to AI Image Generation APIs in 2026",
+          "snippet": "Dec 27, 2025 — Complete guide to AI image generation APIs in 2026 with LM Arena rankings. Compare GPT Image , Gemini, Flux, Seedream, and more.",
+          "host_name": "wavespeed.ai",
+          "rank": 1,
+          "date": "Dec 27, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://api.market/blog/astrosoft/image-generation/best-ai-Image-generation-apis",
+          "name": "7 Best AI Image Generation APIs in 2026: Pricing, Features",
+          "snippet": "Jul 15, 2026 — So we put together this guide to the best AI image generation API options in 2026 , with verified per-image pricing, free tiers, and real curl ... Read more",
+          "host_name": "api.market",
+          "rank": 2,
+          "date": "Jul 15, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/n8n/comments/1ryt50t/free_image_generation_api",
+          "name": "Free image generation api : r/n8n",
+          "snippet": "12 votes, 43 comments. Hello everyone, I've built a n8n workflow which generates 5 different creatives for product ads I'm using http node ...",
+          "host_name": "www.reddit.com",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://developers.openai.com/api/docs/guides/image-generation",
+          "name": "Image generation | OpenAI API",
+          "snippet": "The OpenAI API lets you generate and edit images from text prompts using GPT Image models, including our latest, gpt- image -2 .",
+          "host_name": "developers.openai.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.facebook.com/groups/vibecodinglife/posts/1985976431990884",
+          "name": "Please I need free api for image generation. Any help please",
+          "snippet": "Please I need free api for image generation.\nAny help please",
+          "host_name": "www.facebook.com",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://stackoverflow.com/questions/79574584/trying-to-generate-an-image-using-openai-api",
+          "name": "trying to generate an image using openai api",
+          "snippet": "I'm trying to generate an image using the api … this curl: curl https://api.openai.com/v1/images/generations . How to vertically align an image ...",
+          "host_name": "stackoverflow.com",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://anotherwrapper.com/blog/image-generation-api",
+          "name": "Top Image Generation API in 2025 | Create Stunning Visuals",
+          "snippet": "May 16, 2025 — This article presents the top 8 image generation APIs available in 2025 . popular options like DALL-E 3, Stable Diffusion API , and Midjourney  ...",
+          "host_name": "anotherwrapper.com",
+          "rank": 7,
+          "date": "May 16, 2025",
+          "favicon": ""
+        }
+      ]
+    },
+    "ryrob_streamdiffusion": {
+      "query": "free hosted Stable Diffusion API endpoint no auth 2025",
+      "results": [
+        {
+          "url": "https://platform.stability.ai/docs/api-reference",
+          "name": "StabilityAI REST API (v2beta)",
+          "snippet": "Read more about the model capabilities here. As of April 17, 2025 , we have deprecated the Stable Diffusion 3.0 APIs and will be automatically re-routing calls ...",
+          "host_name": "platform.stability.ai",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/StableDiffusion/comments/18z5ivk/is_stable_diffusions_api_free_if_not_are_there",
+          "name": "Is stable diffusion's API free? If not, are there any other",
+          "snippet": "However, stable diffusion is one of the few generative ai that can be run locally on your computer without the need for an API.",
+          "host_name": "www.reddit.com",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://developer.puter.com/tutorials/free-unlimited-stable-diffusion-api",
+          "name": "Free, Unlimited Stable Diffusion API",
+          "snippet": "Nov 9, 2025 — Learn how to use Puter.js to generate images with Stable Diffusion AI models for free, without needing API keys or backend setup.",
+          "host_name": "developer.puter.com",
+          "rank": 2,
+          "date": "Nov 9, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://runware.ai",
+          "name": "Runware | One API for all AI",
+          "snippet": "One API for all AI. The lowest-cost API on the market, no infrastructure to manage. . Open source like Flux and Stable Diffusion . One auth , one endpoint , one ...",
+          "host_name": "runware.ai",
+          "rank": 3,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://freeapihub.com/apis/stability-ai",
+          "name": "Stability AI API - Stable Diffusion Image Generation",
+          "snippet": "Generate, edit and upscale images with the Stability AI API and Stable Diffusion . Text-to-image, inpainting and background removal, free credits to start.",
+          "host_name": "freeapihub.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://github.com/OuterSpacee/free-ai-apis",
+          "name": "OuterSpacee/free-ai-apis",
+          "snippet": "A collective list of free AI APIs for developers. 100+ APIs, 15 categories. No credit card required. Stable Diffusion models 25 free credits/month. Stable ...",
+          "host_name": "github.com",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://dev.to/navneet_reddy_bcf3eb3425c/i-built-a-free-ai-api-with-26-endpoints-no-api-key-needed-2mkk",
+          "name": "I Built a Free AI API With 26 Endpoints — No API Key Needed",
+          "snippet": "Apr 2, 2026 — So I built DevToolBox API — a completely free REST API with 26 endpoints , including 8 AI-powered ones. No authentication , no signup, no rate ...",
+          "host_name": "dev.to",
+          "rank": 6,
+          "date": "Apr 2, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://medium.com/@speshiou/build-your-own-stable-diffusion-api-endpoint-1618f3aa5a28",
+          "name": "Build your own Stable Diffusion API endpoint | by speshiou",
+          "snippet": "This article unveils a seamless approach to building a Stable Diffusion API endpoint by utilizing the capabilities of SD WebUI and Cog. This ...",
+          "host_name": "medium.com",
+          "rank": 7,
+          "date": "",
+          "favicon": ""
+        }
+      ]
+    },
+    "nscale_direct": {
+      "query": "nscale FLUX.1-schnell free API endpoint huggingface",
+      "results": [
+        {
+          "url": "https://huggingface.co/black-forest-labs/FLUX.1-schnell",
+          "name": "black-forest-labs/FLUX.1-schnell",
+          "snippet": "Jan 2, 2026 — FLUX.1 [schnell ] is a 12 billion parameter rectified flow transformer capable of generating images from text descriptions. API Endpoints The  ...",
+          "host_name": "huggingface.co",
+          "rank": 0,
+          "date": "Jan 2, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://community.n8n.io/t/hugging-face-flux-1-schnell-works-in-http-request-node-but-fails-in-ai-agent-http-request/198766?tl=en",
+          "name": "Hugging Face FLUX.1-schnell works in HTTP Request",
+          "snippet": "Oct 3, 2025 — FLUX.1-schnell works in HTTP Request node but fails in AI Agent HTTP request. Hugging Face Free Video Generation. How should I use Huggingface ...",
+          "host_name": "community.n8n.io",
+          "rank": 1,
+          "date": "Oct 3, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.together.ai/models/flux-1-schnell",
+          "name": "FLUX.1 [schnell] Free API: Pricing, Benchmarks & Docs",
+          "snippet": "Free endpoint for the SOTA open-source image generation model by Black Forest Labs. This model is not available on Together's Serverless API. Related models.",
+          "host_name": "www.together.ai",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://huggingface.co/black-forest-labs/FLUX.1-dev",
+          "name": "black-forest-labs/FLUX.1-dev",
+          "snippet": "Jan 2, 2026 — FLUX.1 [dev ] is a 12 billion parameter rectified flow transformer capable of generating images from text descriptions. API Endpoints The FLUX.1 ...",
+          "host_name": "huggingface.co",
+          "rank": 3,
+          "date": "Jan 2, 2026",
+          "favicon": ""
+        },
+        {
+          "url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell",
+          "name": "flux-1-schnell (Black Forest Labs)",
+          "snippet": "FLUX.1 [schnell ] is a 12 billion parameter rectified flow transformer capable of generating images from text descriptions. Pricing $0.000053 per",
+          "host_name": "developers.cloudflare.com",
+          "rank": 4,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/huggingface/comments/1ijr6og/hugging_face_reduced_the_inference_api_limit_from",
+          "name": "Hugging face reduced the Inference API limit from 1000",
+          "snippet": "Nscale just released a serverless inference API with $5 free credit. They're offering FLUX . 1 - schnell at $0.0013 per 1M pixels … on free tier too",
+          "host_name": "www.reddit.com",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://docs.nscale.com/docs/use-cases/image-generation",
+          "name": "Image Generation",
+          "snippet": "This guide will walk you through integrating image generation models into your application using Nscale's API . FLUX . 1 [ schnell ] Nscale Image Generation API ...",
+          "host_name": "docs.nscale.com",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://discuss.huggingface.co/t/free-api-for-beginners/179088",
+          "name": "Free api for beginners",
+          "snippet": "Aug 21, 2026 — 5-Coder model and FLUX . 1 - schnell for text-to-image generation. The current limits and per-model compute costs are on the Workers AI pricing page ...",
+          "host_name": "discuss.huggingface.co",
+          "rank": 7,
+          "date": "Aug 21, 2026",
+          "favicon": ""
+        }
+      ]
+    },
+    "flux_labs_official": {
+      "query": "FLUX.1 official API free tier pricing bfl",
+      "results": [
+        {
+          "url": "https://bfl.ai/pricing",
+          "name": "Pricing",
+          "snippet": "FLUX API pricing and plans . No subscriptions, no seat fees. $0.29/s $0.41/s $0.53/s balances quality, cost and latency",
+          "host_name": "bfl.ai",
+          "rank": 0,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://bfl.ai",
+          "name": "Black Forest Labs - Frontier AI Lab",
+          "snippet": "Use FLUX models via our API. Simple-to-integrate API to access the latest and most powerful FLUX models. Get started with API Pricing . Download our models, ...",
+          "host_name": "bfl.ai",
+          "rank": 1,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.reddit.com/r/FluxAI/comments/1pehxto/flux2_api_pricing_flux2_proflex_api_and_megapixel",
+          "name": "Flux.2 API Pricing (Flux.2 Pro/Flex API) and Megapixel Billing",
+          "snippet": "Current price king. 1024×1024 Pro = $0.025. BFL official: ~$0.11–$0.12 Kie.ai: $0.025. Flex: ~$0.12 vs official easily $0.45+",
+          "host_name": "www.reddit.com",
+          "rank": 2,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.together.ai/blog/flux-api-is-now-available-on-together-ai-new-pro-free-access-to-flux-schnell",
+          "name": "New FLUX1.1 [pro] and free access to FLUX.1 [schnell]",
+          "snippet": "Mar 10, 2024 — Through our partnership with BFL , we're offering developers 3 months of free , unlimited API access to FLUX . 1 [schnell] to experiment with image ...",
+          "host_name": "www.together.ai",
+          "rank": 3,
+          "date": "Mar 10, 2024",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.aifreeapi.com/en/posts/flux-1-api-comprehensive-guide",
+          "name": "Advanced Image Generation with Black Forest Labs [2025",
+          "snippet": "Jun 15, 2025 — Official BFL API Pricing. Black Forest Labs' official pricing structure for their latest model (FLUX1.1 [pro]):. Usage Volume, Price per Image ... Read more",
+          "host_name": "www.aifreeapi.com",
+          "rank": 4,
+          "date": "Jun 15, 2025",
+          "favicon": ""
+        },
+        {
+          "url": "https://piapi.ai/flux-api",
+          "name": "FLUX.1 API - exceptional image generation",
+          "snippet": "Our Pricing Plans ; Flux -Schnell API . $0.0015 · 1 –4 images per generation; Super-resolution: $0.0015/image ; Flux -dev API . $0.015 · Super-resolution: $0.015/image ... Read more",
+          "host_name": "piapi.ai",
+          "rank": 5,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://github.com/black-forest-labs/flux",
+          "name": "black-forest-labs/flux: Official inference repo for FLUX.1",
+          "snippet": "Our API offers access to all models including our Pro tier non-open weight models. As the fee is based on a monthly usage, we provide code to automatically ...",
+          "host_name": "github.com",
+          "rank": 6,
+          "date": "",
+          "favicon": ""
+        },
+        {
+          "url": "https://www.wireflow.ai/blog/flux-pro-api-pricing-and-code-examples",
+          "name": "Flux Pro API Pricing and Code Examples",
+          "snippet": "Apr 21, 2026 — Is there a free tier for the Flux Pro API? Black Forest Labs offers limited free credits for new accounts . Wireflow has no free generation ... Read more",
+          "host_name": "www.wireflow.ai",
+          "rank": 7,
+          "date": "Apr 21, 2026",
+          "favicon": ""
+        }
+      ]
+    }
+  },
+  "pages": {
+    "pollinations_readme": {
+      "url": "https://pollinations.ai/",
+      "error": "Function invoke failed with status 500: {\"result\":null,\"error\":\"Page reader failed: request failed with status 502: {\\\"errorMessage\\\":\\\"Process exited unexpectedly before completing request (duration: 1000ms, maxMemoryUsage: 786.67MB)\\\"}\"}"
+    },
+    "pollinations_github": {
+      "url": "https://raw.githubusercontent.com/pollinations/pollinations/master/APIDOCS.md",
+      "title": "",
+      "textExcerpt": "# Pollinations.AI API Docs 🌸 ## The World's Most Accessible Open GenAI Platform Create amazing text, images, and audio with our APIs—no signup required to get started! 🚀 Think of Pollinations.AI as a digital garden where you can plant a \"seed\" (your idea) and watch it grow into text, images, or audio with the help of AI. Our APIs are like tools in your gardening shed—easy to use, powerful, and ready to help you create something beautiful. ## Quick Start Ready to dive in? Here are some live examples you can try right in your browser to see what Pollinations.AI can do: - 🖼️ **Create an Image**: Generate a logo for Pollinations.AI [pollinations_logo](https://image.pollinations.ai/prompt/pollinations_logo) - 💬 **Generate Text**: Learn why donating to Pollinations.AI is a great idea [why_you_should_donate](https://text.pollinations.ai/why_you_should_donate) - 🔍 **Search the Web**: Find the latest news about Pollinations.AI [latest_news](https://text.pollinations.ai/latest_news?model=gemini-search) - 🎙️ **Create Audio**: Hear a fun, short hypnosis audio encouraging a donation (just for laughs!) [hypnosis_audio](https://text.pollinations.ai/hypnosis_audio?model=openai-audio&voice=nova) **How to Try These**: Just click the links above, and you’ll see the results instantly in your browser. No coding needed yet! ## Table of Contents - [Image Generation API](#image-generation-api) - [Text Generation API](#text-generation-api) - [Audio Generation API](#audio-generation-api) - [Vision & Multimodal](#vision--multimodal) - [Function Calling](#function-calling) - [Real-time Feeds](#real-time-feeds) - [React Integration](#react-integration) - [Authentication & Rate Limits](#authentication--rate-limits) - [Advanced Features](#advanced-features) - [Best Practices](#best-practices) - [Support & Resources](#support--resources) ## Image Generation API The Image Generation API lets you turn words into pictures. Imagine describing a scene to an artist, and they paint it for you—that’s what this API does, but with AI! ### Generate an Image **Endpoint**: `GET https://image.pollinations.ai/prompt/{prompt}` This endpoint takes a text description (called a \"prompt\") and creates an image based on it. For example, you could say \"a cat wearing sunglasses,\" and the API will generate a picture of that. #### Parameters Here’s what you can customize when generating an image: | Parameter | Type | Description | Default | Example | |-----------|--------|--------------------------------------------------|---------|-----------------------------| | prompt | string | The description of the image (required) | - | \"a fluffy dog in a forest\" | | model | string | The AI model to use (e.g., flux, turbo) | flux | turbo | | width | integer| Image width in pixels | 1024 | 1920 | | height | integer| Image height in pixels | 1024 | 1080 | | seed | integer| A number to get the same image every time | random | 12345 | | nologo | boolean| Remove the Pollinations watermark (needs account)| false | true | | enhance | boolean| Let AI improve your prompt for better results | false | true | | private | boolean| Hide the image from public feeds | false | true | **Analogy**: Think of the prompt as the main idea for your painting, while parameters like width and height are like choosing the size of the canvas. The seed is like telling the artist to paint the same picture again if you give them the same number. #### Examples ##### Simple Image (Command Line) Want a picture of a sunset? Use this command in your terminal: ```bash curl -o sunset.jpg \"https://image.pollinations.ai/prompt/beautiful%20sunset%20over%20ocean\" ``` **What’s Happening?** - `curl` is a tool to make web requests. - `-o sunset.jpg` saves the image as a file named `sunset.jpg`. - The `%20` in the URL is how spaces are encoded (e.g., \"beautiful sunset\" becomes `beautiful%20sunset`). - Run this, and you’ll get a stunning sunset image saved to your computer! ##### Customized Image (Command Line) Let’s create a high-resolution cyberpunk city image with a specific seed for consistency: ```bash curl -o city.jpg \"https://image.pollinations.ai/prompt/cyberpunk%20city%20at%20night?width=1920&height=1080&seed=42&model=flux\" ``` **What’s Happening?** - `width=1920&height=1080` makes a Full HD image. - `seed=42` ensures you get the same city every time you run this. - `model=flux` uses a specific AI model for better quality. ##### Python Example Here’s how to generate an image using Python, perfect for automating task"
+    },
+    "prodia_docs": {
+      "url": "https://docs.prodia.com/reference/introduction",
+      "title": "404",
+      "textExcerpt": "404 | prodia Skip to content prodia Search Ctrl K Cancel Clear GitHub Twitter Select theme Dark Light Auto 404 Page not found. Check the URL or try using the search bar."
+    },
+    "cloudflare_workers_models": {
+      "url": "https://developers.cloudflare.com/workers-ai/models/",
+      "title": "Workers AI Models · Cloudflare Workers AI docs",
+      "textExcerpt": "Workers AI Models · Cloudflare Workers AI docs Skip to content Documentation Index Fetch the complete documentation index at: https://developers.cloudflare.com/workers-ai/llms.txt Use this file to discover all available pages before exploring further. Docs Directory API SDKs Changelog Search Ctrl K Log in Dashboard Workers AI / Overview Getting started Overview Workers Bindings REST API Dashboard Models Configuration Workers Bindings OpenAI compatible API endpoints Vercel AI SDK Hugging Face Chat UI Features Asynchronous Batch API Beta Overview Workers Binding REST API Function calling Beta Overview Embedded Beta Overview Get Started Examples Use fetch() handler Tools based on OpenAPI Spec Use KV API API Reference Troubleshooting Traditional Beta JSON Mode Fine-tunes Overview Using LoRA adapters Beta Public LoRA adapters Prompt caching Prompting Markdown Conversion Beta Overview Usage Workers Binding REST API Supported Formats How it works Conversion Options Guides Demos and architectures Tutorials Agents ↗ Platform Pricing Data usage Limits Glossary AI Gateway ↗ Errors Choose a data or storage product ↗ Event subscriptions Agents ↗ Playground Changelog REST API reference ↗ API Agent resources Agent setup ↗ Cloudflare Skills ↗ Code Mode MCP Server ↗ Domain-specific MCP Servers ↗ MCP Workers AI llms.txt ↗ Workers AI llms-full.txt ↗ Cloudflare Docs llms.txt ↗ Cloudflare Docs llms-full.txt ↗ Home / Workers AI / Models Workers AI Models Last updated Aug 12, 2026 | Copy as Markdown | View as Markdown | Agent setup Looking for more models, including external providers? Check out the unified AI model catalog . Task Types Capabilities Authors Newest first We found 86 models Clear filters No models found Try a different search term, or broaden your search by removing filters. aura-1 Deepgram Text-to-Speech Aura is a context-aware text-to-speech (TTS) model that applies natural pacing, expressiveness, and fillers based on the context of the provided text. The quality of your text input directly impacts the naturalness of the audio output. Cloudflare-hosted Batch Partner Real-time aura-2-en Deepgram Text-to-Speech Aura-2 is a context-aware text-to-speech (TTS) model that applies natural pacing, expressiveness, and fillers based on the context of the provided text. The quality of your text input directly impacts the naturalness of the audio output. Cloudflare-hosted Batch Partner Real-time aura-2-es Deepgram Text-to-Speech Aura-2 is a context-aware text-to-speech (TTS) model that applies natural pacing, expressiveness, and fillers based on the context of the provided text. The quality of your text input directly impacts the naturalness of the audio output. Cloudflare-hosted Batch Partner Real-time bart-large-cnn Beta Meta Summarization BART is a transformer encoder-encoder (seq2seq) model with a bidirectional (BERT-like) encoder and an autoregressive (GPT-like) decoder. You can use this model for text summarization. Cloudflare-hosted Deprecated bge-base-en-v1.5 BAAI Text Embeddings BAAI general embedding (Base) model that transforms any given text into a 768-dimensional vector Cloudflare-hosted Batch bge-large-en-v1.5 BAAI Text Embeddings BAAI general embedding (Large) model that transforms any given text into a 1024-dimensional vector Cloudflare-hosted Batch bge-m3 BAAI Text Embeddings Multi-Functionality, Multi-Linguality, and Multi-Granularity embeddings model. Cloudflare-hosted bge-reranker-base BAAI Text Classification Different from embedding model, reranker uses question and document as input and directly output similarity instead of embedding. You can get a relevance score by inputting query and passage to the reranker. And the score can be mapped to a float value in [0,1] by sigmoid function. Cloudflare-hosted bge-small-en-v1.5 BAAI Text Embeddings BAAI general embedding (Small) model that transforms any given text into a 384-dimensional vector Cloudflare-hosted Batch deepseek-r1-distill-qwen-32b DeepSeek Text Generation DeepSeek-R1-Distill-Qwen-32B is a model distilled from DeepSeek-R1 based on Qwen2.5. It outperforms OpenAI-o1-mini across various benchmarks, achieving new state-of-the-art results for dense models. Cloudflare-hosted Reasoning deepseek-v4-flash-0731 DeepSeek Text Generation DeepSeek-V4-Flash-0731 is the official release of DeepSeek-V4-Flash, superseding the preview version, with substantially enhanced agentic capabilities. Cloudflare-hosted Function calling Reasoning deepseek-v4-pro-0813 DeepSeek Text G"
+    },
+    "fal_pricing": {
+      "url": "https://fal.ai/pricing",
+      "title": "GenAI API Pricing: Haliuo, Vidu, Pixverse | Pay-Per-Use | fal",
+      "textExcerpt": "GenAI API Pricing: Haliuo, Vidu, Pixverse | Pay-Per-Use | fal Try MiniMax H3 Max svg]:stroke-[1.5] transition-[background-color,border-color,color,transform,opacity] duration-160 ease-out-quad border-transparent bg-transparent [&[data-state=open]:not([data-disabled])]:bg-surface-alpha disabled:!border-transparent disabled:!bg-transparent disabled:!text-content-disabled disabled:opacity-50 data-[disabled]:border-transparent data-[disabled]:bg-transparent data-[disabled]:text-content-disabled data-[disabled]:opacity-50 [&:disabled>svg]:!text-content-disabled [&[data-disabled]>svg]:text-content-disabled gap-0 size-7 text-[var(--product-banner-fg)] hover:bg-black/10 hover:text-[var(--product-banner-fg)] dark:text-[var(--product-banner-fg)] dark:hover:bg-white/10 dark:hover:text-[var(--product-banner-fg)] [&>svg]:size-4 [&>svg]:text-current dark:[&>svg]:text-current\"> fal logo Products Documentation Pricing Enterprise Resources Contact Sales Login fal logo svg]:stroke-[1.5] transition-[background-color,border-color,color,transform,opacity] duration-160 ease-out-quad border-transparent text-content-base [&[data-state=open]:not([data-disabled])]:bg-surface-alpha disabled:!border-transparent disabled:!bg-transparent disabled:!text-content-disabled disabled:opacity-50 data-[disabled]:border-transparent data-[disabled]:bg-transparent data-[disabled]:text-content-disabled data-[disabled]:opacity-50 [&:disabled>svg]:!text-content-disabled [&[data-disabled]>svg]:text-content-disabled gap-0 [&>svg]:size-4 [&>svg]:text-current relative size-11 overflow-visible rounded-[2px] border-0 bg-transparent p-0 hover:bg-transparent\"> Fast, reliable, and cost-efficient. fal adapts to your usage, ensuring you only pay for the computing power you consume. It's cost-effective scalability at its best. Serverless &amp; Compute Pricing Competitive pricing for custom deployments. Deploy your own app on our competitively priced GPU fleet, as low as $1.89/hr for H100 . svg]:size-4 [&>svg]:stroke-[1.5] transition-[background-color,border-color,color,transform,opacity] duration-160 ease-out-quad border-transparent bg-neutral-900 text-neutral-50 hover:bg-neutral-700 [&[data-state=open]:not([data-disabled])]:bg-neutral-700 dark:bg-neutral-50 dark:text-neutral-1000 dark:hover:bg-neutral-200 dark:[&[data-state=open]:not([data-disabled])]:bg-neutral-200 [&>svg]:text-neutral-50 dark:[&>svg]:text-neutral-1000 disabled:!border-transparent disabled:!bg-neutral-background disabled:!text-content-disabled data-[disabled]:border-transparent data-[disabled]:bg-neutral-background data-[disabled]:text-content-disabled [&:disabled>svg]:!text-content-disabled [&[data-disabled]>svg]:text-content-disabled h-10 gap-1.5 px-4 text-sm tracking-[-0.01em] w-fit\" href=\"/dashboard\">Start Building svg]:size-4 [&>svg]:stroke-[1.5] transition-[background-color,border-color,color,transform,opacity] duration-160 ease-out-quad border-stroke-strong bg-surface-raised text-content-base hover:border-stroke-stronger hover:bg-surface-alpha [&[data-state=open]:not([data-disabled])]:border-stroke-stronger [&[data-state=open]:not([data-disabled])]:bg-surface-alpha [&>svg]:text-content-control-muted disabled:!border-transparent disabled:!bg-neutral-background disabled:!text-content-disabled data-[disabled]:border-transparent data-[disabled]:bg-neutral-background data-[disabled]:text-content-disabled [&:disabled>svg]:!text-content-disabled [&[data-disabled]>svg]:text-content-disabled h-10 gap-1.5 px-4 text-sm trackin"
+    },
+    "together_pricing": {
+      "url": "https://www.together.ai/pricing",
+      "title": "Pricing | Together AI",
+      "textExcerpt": "Pricing | Together AI Webflow Analyze/Optimize tracking bridge --> 🚀 DeepSeek V4 Pro 0813 vs. GPT-5.6 Sol on DeepSWE → 🤝 Together AI &amp; Y Combinator announce partnership to deliver the first dedicated YC GPU cluster → ⚡ On-demand B200s now available on Together GPU Clusters → 🚀 Now serving MiniMax-M3 for efficient inference → Inference Serverless Inference High-performance inference as APIs Batch Inference Inference for batch workloads Provisioned Throughput Token-based capacity with SLAs Dedicated Model Inference Inference on custom hardware Dedicated Container Inference Inference for custom models MiniMax M3 Gemma 4 31B DeepSeek V4 Pro GLM-5.2 kimi K2.7 Code gpt-oss-120B Model library Explore the top open-source models Compute Accelerated Compute GPU Clusters Reliable GPU clusters at scale AI Factory Custom infrastructure at frontier scale Developer Environments Sandbox Build development environments for AI Storage Managed Storage Store model weights &amp; data securely GB300 GB200 B200 H200 H100 Model Shaping Custom Training From reinforcement learning to full control Fine-Tuning Shape models with your data Evaluations Measure model quality kimi K2.7 Code Gemma 4 31B-it FP8 GLM 5.1 FP4 gpt-oss-120b Qwen3.5 397B A17b Llama 4 Maverick Model library Fine-tune top open-source models Research Research Systems research for production AI Research blog All our research publications Featured publications FlashAttention ATLAS Kernel Collection ThunderKittens DSGym Show all Developers Documentation Technical docs for Together AI Demos Our open-source demo apps Cookbooks Practical implementation guides Voice Agents Build voice agents for production Open-source AI Build better with open models Model Library Playground Together Chat Which LLM to use Open-source ROI calculator Company Resources Customer stories Testimonials from AI Natives Startup accelerator Build and scale your startup Customer support Find answers to your questions Blog Our latest news &amp; blog posts Events Explore our events calendar Company About Get to know us Careers Join our mission Press Together in the news Pricing Serverless Inference High-performance inference as APIs Batch Inference Inference for batch workloads Provisioned Throughput Token-based capacity with SLAs Dedicated Model Inference Inference on custom hardware Dedicated Container Inference Inference for custom models MiniMax M3 Gemma 4 31B DeepSeek V4 Pro GLM-5.2 kimi K2.7 Code gpt-oss-120B Model library Explore the top open-source models Accelerated Compute GPU Clusters Reliable GPU clusters at scale AI Factory Custom infrastructure at frontier scale Developer Environments Sandbox Build development environments for AI Storage Managed Storage Store model weights &amp; data securely GB300 GB200 B200 H200 H100 Custom Training From reinforcement learning to full control Fine-Tuning Shape models with your data Evaluations Measure model quality kimi K2.7 Code Gemma 4 31B-it FP8 GLM 5.1 FP4 gpt-oss-120b Qwen3.5 397B A17b Llama 4 Maverick Model library Fine-tune top open-source models Research Systems research for production AI Research blog All our research publications Featured publications FlashAttention ATLAS Kernel Collection ThunderKittens DSGym Show all Documentation Technical docs for Together AI Demos Our open-source demo apps Cookbooks Practical implementation guides Voice Agents Build voice agents for production Open-source AI Build better with open models Model Library Playground Together Chat Whi"
+    },
+    "segmind_pricing": {
+      "url": "https://www.segmind.com/pricing",
+      "title": "Segmind Pricing - Flexible AI Model Plans & API Pricing",
+      "textExcerpt": "Segmind Pricing - Flexible AI Model Plans &amp; API Pricing K Models Workflows Resources Pricing Flexible plans for everyone Whether you're just starting out or need enterprise-grade power, we have a plan that fits your needs. Monthly Annual 2 months free Flexible Pay as you go Great for getting started and exploring Segmind platform, without any commitments. All Model APIs 1 GB Storage 5 Pixelflows 60 RPM Community Support Get started with $10 Most Popular Pro $ 39 /mo For professionals and small teams looking to build rapid prototypes and scale. $50 monthly credits 10 GB Storage 120 RPM Pixelflows basic 5 business days support Get Started Business $ 99 /mo For working with production environments and professional use cases. $99 monthly credits 100 GB Storage 500 RPM 2 business day support Pixelflow Premium Templates Get Started Scale $ 599 /mo For large companies that requires custom solutions and private deployments. $599 monthly credits 1 TB storage 1000 RPM pooled 1 business day Support Detailed usage analytics Get Started Enterprise Custom solutions with enterprise-grade security and support 99.99% SLA Dedicated Slack support SOC 2 compliance Contact Sales Compare Plans Detailed comparison of features across all plans Features Flexible $10 Pro $39/mo Business $99/mo Scale $599/mo API Access Storage 1 GB 10 GB 100 GB 1 TB Rate Limits (RPM) 60 120 500 1000 Pixelflows Templates Basic Basic Premium Premium Support Community 5 business days 2 business days 24 hours support Monthly Credits Pay as you go $50 $99 $599 Topup Credits Finetuning - Dedicated GPUs - Teams - Usage Analytics - - - Detailed All plans include access to all the models on Segmind, API access and community support via Discord. Serverless Pricing Pay-as-you-go Models &amp; APIs Buy credits to use any model on Segmind, and only pay for what you use. The more you buy, the more you save. Model Price Explorer Search for any AI model and get its pricing details instantly. Volume discounts available Contact our sales team for a custom quote and pricing. Talk to Sales Support &amp; Consulting Expert guidance to ship faster — for Business &amp; Enterprise Add hands-on help from our specialists to generate professional content, automate media workflows, and run reliable productions. Business Support Package Add-on to business plan $800 / mo $667 / mo if paid annually Buy Now Who needs this plan? Creative Agencies or Production Houses Need help in generating professional content with AI — our experts can help. Brands Build and automate media generation for your marketing needs. New-Gen Studios Your production partner for crafting inspiring stories in-house. Enterprise Support Package White-glove onboarding, dedicated support &amp; custom SLAs Custom pricing Contact Us Who needs this plan? Large Organizations &amp; Enterprises Need dedicated account management, priority support, and custom integrations for large-scale deployments. Mission-Critical Production Teams Require guaranteed uptime, custom SLAs, and 24/7 support for business-critical AI workflows. Platform Builders &amp; Integrators Building AI-powered products that need enterprise-grade security, compliance, and dedicated infrastructure. Looking for white-glove onboarding, workflow design (PixelFlow), or dedicated endpoints? We'll scope it in the Enterprise plan. Endpoints Dedicated API Pricing Pay for GPUs instead of per-call. Unlimited API requests with dedicated endpoints for maximum performance. GPU Type Baseline GP"
+    },
+    "replicate_pricing": {
+      "url": "https://replicate.com/pricing",
+      "title": "Pricing – Replicate",
+      "textExcerpt": "Pricing – Replicate Alibaba logo Wan 3.0 is 30% off this week Replicate glyph ctrl+k Explore Pricing Enterprise Docs Blog Sign in Try for free Menu Explore Pricing Enterprise Docs Blog Sign in Try for free Compare models in the Playground Pricing You only pay for what you use on Replicate. Some models are billed by hardware and time, others by input and output. Public models Thousands of open-source machine learning models have been contributed by our community and more are added every day. We also host a wide variety of proprietary models. Most models are billed by the time they take to run. The price-per-second varies according to the hardware in use. When running or training one of these public models, you only pay for the time it takes to process your request. Some models are billed by input and output. We've included some examples below. You'll find estimates for how much any model will cost you on the model's page. black-forest-labs / flux-1.1-pro Faster, better FLUX Pro. Text-to-image model with excellent image quality, prompt adherence, and output diversity. $0.04 / output image black-forest-labs / flux-dev A 12 billion parameter rectified flow transformer capable of generating images from text descriptions $0.025 / output image black-forest-labs / flux-schnell The fastest image generation model tailored for local development and personal use $3.00 / thousand output images deepseek-ai / deepseek-r1 A reasoning model trained with reinforcement learning, on par with OpenAI o1 $0.01 / thousand output tokens $3.75 / million input tokens ideogram-ai / ideogram-v3-quality The highest quality Ideogram v3 model. v3 creates images with stunning realism, creative designs, and consistent styles $0.09 / output image recraft-ai / recraft-v3 Recraft V3 (code-named red_panda) is a text-to-image model with the ability to generate long texts, and images in a wide list of styles. As of today, it is SOTA in image generation, proven by the Text-to-Image Benchmark by Artificial Analysis $0.04 / output image wavespeedai / wan-2.1-i2v-480p Accelerated inference for Wan 2.1 14B image to video, a comprehensive and open suite of video foundation models that pushes the boundaries of video generation. $0.09 / second of output video wavespeedai / wan-2.1-i2v-720p Accelerated inference for Wan 2.1 14B image to video with high resolution, a comprehensive and open suite of video foundation models that pushes the boundaries of video generation. $0.25 / second of output video Private models You aren't limited to the public models on Replicate: you can deploy your own custom models using Cog , our open-source tool for packaging machine learning models. Unlike public models, most private models (with the exception of fast booting fine-tunes ) run on dedicated hardware so you don't have to share a queue with anyone else. This means you pay for all the time instances of the model are online: the time they spend setting up; the time they spend idle, waiting for requests; and the time they spend active, processing your requests. If you get a ton of traffic, we automatically scale up and down to handle the demand. For fast booting fine-tunes you'll only be billed for the time the model is active and processing your requests, so you won't pay for idle time like with other private models. Fast booting fine-tunes are labeled as such in the model's version list. Hardware pricing CPU (Small) cpu-small $ 0.000025 /sec $ 0.09 /hr GPU - CPU 1x GPU RAM - RAM 2GB CPU cpu $ 0.000"
+    },
+    "leonardo_api_docs": {
+      "url": "https://docs.leonardo.ai/",
+      "title": "Quick Start Guide",
+      "textExcerpt": "Quick Start Guide For AI agents: visit https://docs.leonardo.ai/llms.txt for an index of all pages formatted in Markdown and endpoints in OpenAPI. Append .md to any documentation page URL to get its markdown version. Jump to Content Guides Recipes API Reference v1.0 v2.0 Guides The Leonardo.Ai Developer Hub Welcome to the Leonardo.Ai developer hub. You'll find comprehensive guides and documentation to help you start working with Leonardo.Ai as quickly as possible, as well as support if you get stuck. Let's jump right in! Get Started v2.0 Guides Recipes API Reference Search CTRL-K"
+    },
+    "edenai_docs": {
+      "url": "https://docs.edenai.ai/",
+      "title": "",
+      "publishedTime": "Mon, 17 Nov 2025 14:37:32 GMT",
+      "textExcerpt": "Suspicious Site Blocked This site was blocked because it may contain unsafe content that can harm your device or compromise your personal info. &nbsp; Managing Security Shield Residential customers can use My Spectrum App Business customers can use Spectrumbusiness.net"
+    },
+    "bfl_pricing": {
+      "url": "https://docs.bfl.ai/",
+      "error": "Function invoke failed with status 500: {\"result\":null,\"error\":\"Page reader failed: request failed with status 502: {\\\"errorMessage\\\":\\\"Process exited unexpectedly before completing request (duration: 1530ms, maxMemoryUsage: 821.01MB)\\\"}\"}"
+    },
+    "dezgo_docs": {
+      "url": "https://docs.dezgo.com/",
+      "error": "Function invoke failed with status 500: {\"result\":null,\"error\":\"Page reader failed: request failed with status 502: {\\\"errorMessage\\\":\\\"Process exited unexpectedly before completing request (duration: 2090ms, maxMemoryUsage: 821.01MB)\\\"}\"}"
+    },
+    "hf_inference_providers": {
+      "url": "https://huggingface.co/docs/inference/en/index",
+      "title": "404 – Hugging Face",
+      "textExcerpt": "404 – Hugging Face Hugging Face Models Datasets Spaces Buckets new Docs Enterprise Pricing Website Tasks HuggingChat Collections Languages Organizations Community Blog Posts Daily Papers Hardware Learn Discord Forum GitHub Solutions Team &amp; Enterprise Hugging Face PRO Enterprise Support Inference Providers Inference Endpoints Storage Buckets Log In Sign Up 404 Sorry, we can't find the page you are looking for. System theme Website Models Datasets Spaces Changelog Inference Endpoints HuggingChat Company About Brand assets Terms of service Privacy Careers Press Resources Learn Documentation Blog Forum Service Status Speed test Social GitHub Twitter LinkedIn Discord"
+    },
+    "novita_pricing": {
+      "url": "https://novita.ai/pricing",
+      "title": "Novita AI – Model Libraries & GPU Cloud - Deploy, Scale & Innovate",
+      "publishedTime": "Mon, 04 Apr 2022 07:23:49 GMT",
+      "textExcerpt": "Pricing | Novita AI The website requires JavaScript to function properly. Model APIs Agent Sandbox GPUs Resources Pricing Start Building Pricing Pricing to seamlessly scale from idea to enterprise Explore pricing for our Model APIs and GPU resources. Find the right plan to match your needs with transparent rates and flexible options. Serverless Endpoints Dedicated Endpoints Agent Sandbox GPUs Batch inference is available at an introductory 50% discount on input and output tokens for supported models. Learn More All LLM Image Audio Video AI Search Cache All Deepseek Advanced AI models from DeepSeek, offering cutting-edge reasoning capabilities and competitive pricing for enterprise and research applications. DeepSeek V4 Pro 0813 More Context 1M Input $1.32 /Mt · Cache Read $0.132 /Mt Output $3.96 /Mt Deepseek V4 Flash 0731 More Context 1M Input $0.44 /Mt · Cache Read $0.028 /Mt Output $1.32 /Mt Deepseek V4 Flash More Context 1M Input $0.14 /Mt · Cache Read $0.028 /Mt Output $0.28 /Mt Deepseek V4 Pro More Context 1M Input $1.6 /Mt · Cache Read $0.135 /Mt Output $3.2 /Mt Deepseek V3.2 More Context 160K Input $0.269 /Mt · Cache Read $0.1345 /Mt Output $0.4 /Mt DeepSeek-OCR 2 More Context 8K Input $0.03 /Mt Output $0.03 /Mt Deepseek V3.2 Exp More Context 160K Input $0.27 /Mt Output $0.41 /Mt Deepseek V3.1 Terminus More Context 128K Input $0.27 /Mt · Cache Read $0.135 /Mt Output $1 /Mt DeepSeek V3.1 More Context 128K Input $0.27 /Mt · Cache Read $0.135 /Mt Output $1 /Mt DeepSeek V3 0324 More Context 160K Input $0.27 /Mt · Cache Read $0.135 /Mt Output $1.12 /Mt DeepSeek R1 0528 More Context 160K Input $0.7 /Mt · Cache Read $0.35 /Mt Output $2.5 /Mt DeepSeek R1 Distill LLama 70B More Context 8K Input $0.8 /Mt Output $0.8 /Mt DeepSeek V3 (Turbo) More Context 63K Input $0.4 /Mt Output $1.3 /Mt DeepSeek R1 (Turbo) More Context 63K Input $0.7 /Mt Output $2.5 /Mt Deepseek Advanced AI models from DeepSeek, offering cutting-edge reasoning capabilities and competitive pricing for enterprise and research applications. Model Name Context Input Output Actions DeepSeek V4 Pro 0813 1M $1.32 /Mt · Cache Read $0.132 /Mt $3.96 /Mt More Deepseek V4 Flash 0731 1M $0.44 /Mt · Cache Read $0.028 /Mt $1.32 /Mt More Deepseek V4 Flash 1M $0.14 /Mt · Cache Read $0.028 /Mt $0.28 /Mt More Deepseek V4 Pro 1M $1.6 /Mt · Cache Read $0.135 /Mt $3.2 /Mt More Deepseek V3.2 160K $0.269 /Mt · Cache Read $0.1345 /Mt $0.4 /Mt More DeepSeek-OCR 2 8K $0.03 /Mt $0.03 /Mt More Deepseek V3.2 Exp 160K $0.27 /Mt $0.41 /Mt More Deepseek V3.1 Terminus 128K $0.27 /Mt · Cache Read $0.135 /Mt $1 /Mt More DeepSeek V3.1 128K $0.27 /Mt · Cache Read $0.135 /Mt $1 /Mt More DeepSeek V3 0324 160K $0.27 /Mt · Cache Read $0.135 /Mt $1.12 /Mt More DeepSeek R1 0528 160K $0.7 /Mt · Cache Read $0.35 /Mt $2.5 /Mt More DeepSeek R1 Distill LLama 70B 8K $0.8 /Mt $0.8 /Mt More DeepSeek V3 (Turbo) 63K $0.4 /Mt $1.3 /Mt More DeepSeek R1 (Turbo) 63K $0.7 /Mt $2.5 /Mt More Qwen Qwen series models offering efficient language processing with various parameter sizes, from lightweight to enterprise-grade solutions. Qwen3.8 Flash More Context 977K Input $0.15 /Mt · Cache Read $0.016 /Mt Output $0.47 /Mt Qwen3.8 27B More Context 977K Input $0.42 /Mt · Cache Read $0.085 /Mt Output $3 /Mt Qwen3.8 2.4T A95B More Context 977K Input $2 /Mt · Cache Read $0.25 /Mt Output $6 /Mt Qwen3.8 Max More Context 977K Input $2 /Mt · Cache Read $0.25 /Mt Output $6 /Mt Qwen3.7-Max More Context 977K Input $1.25 /Mt · Cache Read $0.25 /Mt Ou"
+    },
+    "cf_workers_pricing": {
+      "url": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "title": "Pricing · Cloudflare Workers AI docs",
+      "textExcerpt": "Pricing · Cloudflare Workers AI docs Skip to content Documentation Index Fetch the complete documentation index at: https://developers.cloudflare.com/workers-ai/llms.txt Use this file to discover all available pages before exploring further. Docs Directory API SDKs Changelog Search Ctrl K Log in Dashboard Workers AI / Overview Getting started Overview Workers Bindings REST API Dashboard Models Configuration Workers Bindings OpenAI compatible API endpoints Vercel AI SDK Hugging Face Chat UI Features Asynchronous Batch API Beta Overview Workers Binding REST API Function calling Beta Overview Embedded Beta Overview Get Started Examples Use fetch() handler Tools based on OpenAPI Spec Use KV API API Reference Troubleshooting Traditional Beta JSON Mode Fine-tunes Overview Using LoRA adapters Beta Public LoRA adapters Prompt caching Prompting Markdown Conversion Beta Overview Usage Workers Binding REST API Supported Formats How it works Conversion Options Guides Demos and architectures Tutorials Agents ↗ Platform Pricing Data usage Limits Glossary AI Gateway ↗ Errors Choose a data or storage product ↗ Event subscriptions Agents ↗ Playground Changelog REST API reference ↗ API Agent resources Agent setup ↗ Cloudflare Skills ↗ Code Mode MCP Server ↗ Domain-specific MCP Servers ↗ MCP Workers AI llms.txt ↗ Workers AI llms-full.txt ↗ Cloudflare Docs llms.txt ↗ Cloudflare Docs llms-full.txt ↗ Home / Workers AI / Platform / Pricing Pricing Last updated Aug 28, 2026 | Copy as Markdown | View as Markdown | Agent setup Overview Pay with AI Gateway credits What are Neurons? LLM model pricing Embeddings model pricing Image model pricing Audio model pricing Other model pricing Note Workers AI has updated pricing to be more granular, with per-model unit-based pricing presented, but still billing in neurons in the back end. Workers AI is included in both the Free and Paid Workers plans and is priced at $0.011 per 1,000 Neurons . Our free allocation allows anyone to use a total of 10,000 Neurons per day at no charge . To use more than 10,000 Neurons per day, you need to sign up for the Workers Paid plan . On Workers Paid, you will be charged at $0.011 / 1,000 Neurons for any usage above the free allocation of 10,000 Neurons per day. You can monitor your Neuron usage in the Cloudflare Workers AI dashboard ↗ . All limits reset daily at 00:00 UTC. If you exceed any one of the above limits, further operations will fail with an error. Free allocation Pricing Workers Free 10,000 Neurons per day N/A - Upgrade to Workers Paid Workers Paid 10,000 Neurons per day $0.011 / 1,000 Neurons Note Some models require a paid billing method. This applies to @cf/moonshotai/kimi-k2.6 , @cf/moonshotai/kimi-k2.7-code , @cf/zai-org/glm-5.2 , @cf/zai-org/glm-5.3 , @cf/zai-org/glm-5.3-flash , @cf/deepseek-ai/deepseek-v4-flash-0731 , and @cf/deepseek-ai/deepseek-v4-pro-0813 . You can access these models with either the Workers Paid plan or prepaid AI Gateway credits . Pay with AI Gateway credits You can use prepaid AI Gateway credits to pay for Workers AI inference. Set the gateway's Workers AI billing setting to Unified billing , then specify that gateway in the AI binding or REST API request. Requests to frontier models that use prepaid credits receive higher rate limits . What are Neurons? Neurons are our way of measuring AI outputs across different models, representing the GPU compute needed to perform your request. Our serverless model allows you to pay only for what you use without having to worry about renting, managing, or scaling GPUs. Note The Price in Tokens column is equivalent to the Price in Neurons column - the different units are displayed so you can easily compare and understand pricing. LLM model pricing Model Price in Tokens Price in Neurons @cf/meta/llama-3.2-1b-instruct $0.027 per M input tokens $0.201 per M output tokens 2457 neurons per M input tokens 18252 neurons per M output tokens @cf/meta/llama-3.2-3b-instruct $0.051 per M input tokens $0.335 per M output tokens 4625 neurons per M input tokens 30475 neurons per M output tokens @cf/meta/llama-3.1-8b-instruct-fp8-fast $0.045 per M input tokens $0.384 per M output tokens 4119 neurons per M input tokens 34868 neurons per M output tokens @cf/meta/llama-3.2-11b-vision-instruct $0.049 per M input tokens $0.676 per M output tokens 4410 neurons per M input tokens 61493 neurons per M output tokens @cf/meta/llama-3.1-70b-instruct-fp8-fast $0.293 per M input tokens $2.253 per M output tokens 26668 neurons per M input tokens 204805 neurons per M output tokens @cf/meta/llama-3.3-70b-instruct-fp8-fast $0.293 per M input tokens $2.253 per M output tokens 26668 neurons per M input tokens 204805 neurons per M output tokens @cf/deepseek-ai/deepseek-r1-distill-qwen-32b $0.497 per M input tokens $4.881 per M output tokens 45170 neurons per M input tokens 443756 neurons per M output tokens @cf/deepseek-ai/deepseek-v4-flash-0731 $0.440 per M input tokens $0.014 per M cached input tokens $1.320 per M output tokens 40000 neurons per M input tokens 1273 neurons per M cached input tokens 120000 neurons per M output tokens @cf/deepseek-ai/deepseek-v4-pro-0813 $1.320 per M input tokens $0.044 per M cached input tokens $3.960 per M output tokens 120000 neurons per M input tokens 4000 neurons per M cached input tokens 360000 neurons per M output tokens @cf/mistral/mistral-7b-instruct-v0.1 $0.110 per M input tokens $0.190 per M output tokens 10000 neurons per M input tokens 17300 neurons per M output tokens @cf/mistralai/mistral-small-3.1-24b-instruct $0.351 per M input tokens $0.555 per M output tokens 31876 neurons per M input tokens 50488 neurons per M output tokens @cf/meta/llama-3.1-8b-instruct $0.282 per M input tokens $0.827 per M output tokens 25608 neurons per M input tokens 75147 neurons per M output tokens @cf/meta/llama-3.1-8b-instruct-fp8 $0.152 per M input tokens $0.287 per M output tokens 13778 neurons per M input tokens 26128 neurons per M output tokens @cf/meta/llama-3.1-8b-"
+    },
+    "cf_flux_schnell": {
+      "url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+      "error": "timeout 60s"
+    },
+    "puter_free": {
+      "url": "https://developer.puter.com/tutorials/free-unlimited-image-generation-api",
+      "title": "Free, Unlimited Image Generation API",
+      "textExcerpt": "Free, Unlimited Image Generation API Start Building Platform AI Gateway One API, all AI models Database Fast NoSQL database Storage Scalable cloud file system Auth User authentication &amp; accounts Serverless Workers Run code serverless Peer Real-time communication Networking TCP/IP in the browser! Hosting Instant static site hosting Resources Documentation Tutorials Code Playground Blog Showcase Open-source Docs Pricing Blog 43.3K Ship a Full-Stack App with One Prompt Copy this prompt into your AI coding agent, or open it in one below. Give this to your AI Build an AI chat app using Puter.js Try in Claude Code Codex Claude OpenAI Cursor Lovable Coding manually? see the guide On this page Getting Started Example 1: Generate a simple image Example 2: Use different models and quality settings List of Image Generation Models Conclusion Related Tutorials Free, Unlimited Image Generation API Nariman Jelveh , Reynaldi Chernando Updated: June 30, 2026 On this page Getting Started Example 1: Generate a simple image Example 2: Use different models and quality settings List of Image Generation Models Conclusion Related This tutorial will show you how to use Puter.js to add AI image generation to your apps for free, without needing API keys or servers. Puter.js provides access to powerful image generation models including GPT Image 2 , Nano Banana Pro , FLUX.2 [pro] , Grok Imagine Image , and Stable Diffusion 3 directly from your frontend code. Puter.js uses the User-Pays model , where users of your application cover their own AI costs. Each user authenticates with their own Puter account, so there are no API keys for you to manage. This means you as a developer don't pay anything for your users' usage, making your app practically free to run. You can scale to unlimited users and pay nothing for the AI or server usage. Puter.js is also a great fit for AI coding assistants, agents, and vibe coding platforms such as Claude Code, Codex , OpenCode, Lovable, Replit, Bolt.new, and others. Since Puter.js needs no keys and no backend, AI-generated apps and programs that rely on it run end-to-end with no third-party service to sign up for, nothing to provision, and no API keys to paste in. That removes a significant category of security issues along with the setup friction that normally prevents these apps from working out of the box. Getting Started To use Puter.js, import our npm module in your project: // npm install @heyputer/puter.js import { puter } from '@heyputer/puter.js' ; Or alternatively, add our script via CDN if you are working directly with HTML, simply add it to the &lt;head&gt; or &lt;body&gt; section of your code: &lt; script src = \"https://js.puter.com/v2/\" &gt; &lt;/ script &gt; Nothing else is required to start using Puter.js for free image generation capabilities. Example 1: Generate a simple image To generate an image using GPT Image, use the puter.ai.txt2img() function: puter. ai . txt2img ( \"A peaceful mountain landscape at sunset\" ) . then ( imageElement =&gt; { document . body . appendChild (imageElement); }); Full code example: &lt; html &gt; &lt; body &gt; &lt; h1 &gt; AI Image Generation &lt;/ h1 &gt; &lt; script src = \"https://js.puter.com/v2/\" &gt; &lt;/ script &gt; &lt; script &gt; puter. ai . txt2img ( \"A peaceful mountain landscape at sunset\" ) . then ( imageElement =&gt; { document . body . appendChild (imageElement); }); &lt;/ script &gt; &lt;/ body &gt; &lt;/ html &gt; The above example uses the default model to generate an image. You can specify different models and quality settings as shown in the next example. Example 2: Use different models and quality settings You can specify different image generation models and quality levels: &lt; html &gt; &lt; body &gt; &lt; h2 &gt; Different Models Comparison &lt;/ h2 &gt; &lt; div id = \"images\" &gt; &lt;/ div &gt; &lt; script src = \"https://js.puter.com/v2/\" &gt; &lt;/ script &gt; &lt; script &gt; const prompt = \"A futuristic city with flying cars\" ; const container = document . getElementById ( 'images' ); container. innerHTML = '' ; // GPT Image with low quality puter. ai . txt2img (prompt, { model : \"openai/gpt-image-2\" , quality : \"low\" }) . then ( img =&gt; { const div = document . createElement ( 'div' ); Show 43 more lines... &lt; html &gt; &lt; body &gt; &lt; h2 &gt; Different Models Comparison &lt;/ h2 &gt; &lt; div id = \"images\" &gt; &lt;/ div &gt; &lt; script src = \"https://js.puter.com/v2/\" &gt; &lt;/ script &gt; &lt; script &gt; const prompt = \"A futuristic city with flying cars\" ; const container = document . getElementById ( 'images' ); container. innerHTML = '' ; // GPT Image with low quality puter. ai . txt2img (prompt, { model : \"openai/gpt-image-2\" , quality : \"low\" }) . then ( img =&gt; { const div = document . createElement ( 'div' ); div. innerHTML = '&lt;h3&gt;GPT Image (Quality set to low)&lt;/h3&gt;' ; div. appendChild (img); container. appendChild (div); }); // Nano Banana Pro (Gemini 3 Pro Image) puter. ai . txt2img (prompt, { model : \"google/gemini-3-pro-image-preview\" }) . then ( img =&gt; { const div = document . createElement ( 'div' ); div. innerHTML = '&lt;h3&gt;Nano Banana Pro (Gemini 3 Pro Image)&lt;/h3&gt;' ; div. appendChild (img); container. appendChild (div); }); // FLUX.2 [pro] puter. ai . txt2img (prompt, { model : \"black-forest-labs/flux-2-pro\" }) . then ( img =&gt; { const div = document . createElement ( 'div' ); div. innerHTML = '&lt;h3&gt;FLUX.2 [pro]&lt;/h3&gt;' ; div. appendChild (img); container. appendChild (div); }); // Grok Imagine Image puter. ai . txt2img (prompt, { model : \"x-ai/grok-imagine-image\" }) . then ( img =&gt; { const div = document . createElement ( 'div' ); div. innerHTML = '&lt;h3&gt;Grok Imagine Image&lt;/h3&gt;' ; div. appendChild (img); container. appendChild (div); }); // Stable Diffusion 3 puter. ai . txt2img (prompt, { model : \"stabilityai/stable-diffusion-3-medium\" }) . then ( img =&gt; { const div = document . createElement ( 'div' ); div. innerHTML"
+    },
+    "together_flux_schnell": {
+      "url": "https://www.together.ai/models/flux-1-schnell",
+      "title": "FLUX.1 [schnell] Free API: Pricing, Benchmarks & Docs | Together AI",
+      "textExcerpt": "FLUX.1 [schnell] Free API: Pricing, Benchmarks &amp; Docs | Together AI Webflow Analyze/Optimize tracking bridge --> Inference Serverless Inference High-performance inference as APIs Batch Inference Inference for batch workloads Provisioned Throughput Token-based capacity with SLAs Dedicated Model Inference Inference on custom hardware Dedicated Container Inference Inference for custom models MiniMax M3 Gemma 4 31B DeepSeek V4 Pro GLM-5.2 kimi K2.7 Code gpt-oss-120B Model library Explore the top open-source models Compute Accelerated Compute GPU Clusters Reliable GPU clusters at scale AI Factory Custom infrastructure at frontier scale Developer Environments Sandbox Build development environments for AI Storage Managed Storage Store model weights &amp; data securely GB300 GB200 B200 H200 H100 Model Shaping Custom Training From reinforcement learning to full control Fine-Tuning Shape models with your data Evaluations Measure model quality kimi K2.7 Code Gemma 4 31B-it FP8 GLM 5.1 FP4 gpt-oss-120b Qwen3.5 397B A17b Llama 4 Maverick Model library Fine-tune top open-source models Research Research Systems research for production AI Research blog All our research publications Featured publications FlashAttention ATLAS Kernel Collection ThunderKittens DSGym Show all Developers Documentation Technical docs for Together AI Demos Our open-source demo apps Cookbooks Practical implementation guides Voice Agents Build voice agents for production Open-source AI Build better with open models Model Library Playground Together Chat Which LLM to use Open-source ROI calculator Company Resources Customer stories Testimonials from AI Natives Startup accelerator Build and scale your startup Customer support Find answers to your questions Blog Our latest news &amp; blog posts Events Explore our events calendar Company About Get to know us Careers Join our mission Press Together in the news Pricing Serverless Inference High-performance inference as APIs Batch Inference Inference for batch workloads Provisioned Throughput Token-based capacity with SLAs Dedicated Model Inference Inference on custom hardware Dedicated Container Inference Inference for custom models MiniMax M3 Gemma 4 31B DeepSeek V4 Pro GLM-5.2 kimi K2.7 Code gpt-oss-120B Model library Explore the top open-source models Accelerated Compute GPU Clusters Reliable GPU clusters at scale AI Factory Custom infrastructure at frontier scale Developer Environments Sandbox Build development environments for AI Storage Managed Storage Store model weights &amp; data securely GB300 GB200 B200 H200 H100 Custom Training From reinforcement learning to full control Fine-Tuning Shape models with your data Evaluations Measure model quality kimi K2.7 Code Gemma 4 31B-it FP8 GLM 5.1 FP4 gpt-oss-120b Qwen3.5 397B A17b Llama 4 Maverick Model library Fine-tune top open-source models Research Systems research for production AI Research blog All our research publications Featured publications FlashAttention ATLAS Kernel Collection ThunderKittens DSGym Show all Documentation Technical docs for Together AI Demos Our open-source demo apps Cookbooks Practical implementation guides Voice Agents Build voice agents for production Open-source AI Build better with open models Model Library Playground Together Chat Which LLM to use Open-source ROI calculator Resources Customer stories Testimonials from AI Natives Startup accelerator Build and scale your startup Customer support Find answers to your questions Blog Our latest news &amp; blog posts Events Explore our events calendar Company About Get to know us Careers Join our mission Press Together in the news Contact sales Contact sales Sign in Models &nbsp;/ Black Forest Labs Image Free FLUX.1 [schnell] Free Free endpoint for the SOTA open-source image generation model by Black Forest Labs. This model is not available on Together’s Serverless API. Related models Image GPT Image 2 Price / image $0.053 No items found. Image Reasoning Image Wan 2.6 Image Price / image $0.03 Parameters 20B No items found. Image Image Nano Banana Pro (Gemini 3 Pro Image) Price / image $0.134 No items found. Image Model specifications Model data Model provider Black Forest Labs Type Image Free Main use cases Image Generation Parameters 12B Category Image Start building on Together AI From optimized training and model shaping to large-scale production inference Explore models Products Accelerated Compute Serverless Inference Provisioned Throughput Dedicated Inference Fine-Tuning Sandbox Evaluations Models See all models DeepSeek Meta Qwen Google OpenAI Mistral AI Custom models Developers Research Docs Open-source AI OSS ROI calculator Pricing Pricing overview Inference Fine-Tuning GPU Clusters Resources Blog About us Careers Customer Stories Support Privacy Policy Terms of service Cookie Policy Consent Preferences © 2026 Together AI. All Rights Reserved. Privacy Policy Terms of service Company Email * Submit First Name * Last Name * Company Email * Company Location * North America EMEA APAC LATAM Which Products are you interested in? * Select all that apply. Inference Fine-Tuning Reinforcement Learning GPU Clusters Code Sandbox Don't Know Other What stage is your AI project currently in? * Just experimenting Building a prototype In active development Near launch Already in production I'm not involved with an AI project Share More Details about your request Need Help with existing products or subscriptions? Please Contact Support . Together AI needs the contact information you provide to us to contact you about our products and services. You may unsubscribe from these communications at any time. For information on how to unsubscribe, as well as our privacy practices and commitment to protecting your privacy, please review our Privacy Policy . Submit Launching soon Want to be notified when the model is available on Together AI? Business Email * Submit You're on the list We'll email you when the endpoint goes live. Until then, 200+ models are ready to call. "
+    },
+    "replicate_tryfree": {
+      "url": "https://replicate.com/collections/try-for-free",
+      "title": "Try free AI models to generate images, videos, and more - Replicate",
+      "textExcerpt": "Try free AI models to generate images, videos, and more - Replicate Alibaba logo Wan 3.0 is 30% off this week Replicate glyph ctrl+k Explore Pricing Enterprise Docs Blog Sign in Try for free Menu Explore Pricing Enterprise Docs Blog Sign in Try for free Compare models in the Playground Collections Try AI models for free Video generation minimax/video-01 : Generate videos from text or images. Use a reference image to create consistent characters. luma/reframe-video : Reframe and resize videos up to 30 seconds long. Great for social posts. topazlabs/video-upscale : Enhance and upscale low-res videos using Topaz’s upscaling models. Image generation google/imagen-4 : Google’s latest text-to-image model. High quality and easy to prompt. black-forest-labs/flux-kontext-pro : Strong prompt following and style control for both photoreal and illustrated outputs. ideogram-ai/ideogram-v3-turbo : Fast, creative generation. Good for posters, products, or anything with text. black-forest-labs/flux-1.1-pro : Improved FLUX model with more consistent image quality and diversity. black-forest-labs/flux-dev : Experimental 12B parameter model. Good for testing edge cases. Image upscaling + restoration topazlabs/image-upscale : Professional-grade image upscaling. Clean results with minimal artifacts. szcho/codeformer : Restore low-quality or AI-generated faces. tencentarc/gfpgan : Fast face restoration, especially for old or damaged photos. Recommended Models black-forest-labs / flux-2-pro High-quality image generation and editing with support for eight reference images Updated 5&nbsp;months ago 10.6M runs Official google / imagen-4 Google's Imagen 4 flagship model Updated 6&nbsp;months, 2&nbsp;weeks ago 8.2M runs Official black-forest-labs / flux-kontext-pro A state-of-the-art text-based image editing model that delivers high-quality outputs with excellent prompt following and consistent results for transforming images through natural language Updated 9&nbsp;months, 2&nbsp;weeks ago 53.4M runs Official black-forest-labs / flux-1.1-pro Faster, better FLUX Pro. Text-to-image model with excellent image quality, prompt adherence, and output diversity. Updated 9&nbsp;months, 2&nbsp;weeks ago 72.5M runs Official ideogram-ai / ideogram-v3-turbo Turbo is the fastest and cheapest Ideogram v3. v3 creates images with stunning realism, creative designs, and consistent styles Updated 9&nbsp;months, 3&nbsp;weeks ago 9.5M runs Official luma / reframe-video Change the aspect ratio of any video up to 30 seconds long, outputs will be 720p Updated 9&nbsp;months, 3&nbsp;weeks ago 81.6K runs Official minimax / video-01 Generate 6s videos with prompts or images. (Also known as Hailuo). Use a subject reference to make a video with a character and the S2V-01 model. Updated 9&nbsp;months, 3&nbsp;weeks ago 748.6K runs Official black-forest-labs / flux-dev A 12 billion parameter rectified flow transformer capable of generating images from text descriptions Updated 1&nbsp;year, 2&nbsp;months ago 51.9M runs Official resemble-ai / chatterbox Generate expressive, natural speech. Features unique emotion control, instant voice cloning from short audio, and built-in watermarking. Updated 1&nbsp;year, 2&nbsp;months ago 431.7K runs Official topazlabs / image-upscale Professional-grade image upscaling, from Topaz Labs Updated 1&nbsp;year, 4&nbsp;months ago 3.4M runs Official topazlabs / video-upscale Video Upscaling from Topaz Labs Updated 1&nbsp;year, 4&nbsp;months ago 1M runs Official sczhou / codeformer Robust face restoration algorithm for old photos / AI-generated faces Updated 1&nbsp;year, 7&nbsp;months ago 54.6M runs tencentarc / gfpgan Practical face restoration algorithm for *old photos* or *AI-generated faces* Updated 2&nbsp;years, 5&nbsp;months ago 116.1M runs Frequently asked questions What is the Try for Free collection? The Try for Free collection is our list of models that you can run without purchasing credit after creating a Replicate account. This is great to see if Replicate will work for your use case before spending money. Are these models free forever? No. The models in this collection are free for a limited number of runs. After you've hit the free use limit, you'll need to add billing and purchase credit to continue using these models. How do I pick a model from the Try for Free collection? Think about the type of task you want to test—like text-to-image generation, image restoration, or video creation—and select a model from the collection that matches it. Popular options include google/imagen-4 and black-forest-labs/flux-1.1-pro . The goal is to experiment quickly and see what works for your use case. What kinds of things can I do with these models? This collection covers a wide range of capabilities, such as: Generating images from text prompts. Animating or creating short videos. Upscaling or restoring old images. Experimenting with creative or utility tools at small scale. Check each model’s page for its specific inputs and features. How do I run a model from the Try for Free collection? Go to the Try for Free collection page. Select a model that matches your task. Upload your input (text, image, or video) or provide a URL if required. Run the model and review the output. If it works for your needs, add a credit card to your account and purchase credit to continue using this or other models on Replicate. Can I use outputs from Try for Free models commercially? In many cases, yes—but it depends on the model’s license. Even if a model is free to run, it may have restrictions on commercial use. Always review the license on the model card before using its outputs in a product or project. What should I keep in mind when testing models here? You have a limited number of free runs for the models in this collection. Good input quality (e.g., clean prompts or images) will help you get a meaningful first result. Even free models have licenses and terms of use, so check them before commercial deployment. All services are onlin"
+    },
+    "hf_inference_index": {
+      "url": "https://huggingface.co/docs/inference-providers/en/index",
+      "error": "timeout 60s"
+    },
+    "prodia_ref": {
+      "url": "https://prodia.readme.io/reference/generate",
+      "error": "Function invoke failed with status 500: {\"result\":null,\"error\":\"Page reader failed: request failed with status 502: {\\\"errorMessage\\\":\\\"Process exited unexpectedly before completing request (duration: 1224ms, maxMemoryUsage: 855.10MB)\\\"}\"}"
+    },
+    "deapi_ai": {
+      "url": "https://deapi.ai/use-cases/text-to-image",
+      "title": "AI Image Generation API | Free Text-to-Image - deAPI.ai",
+      "textExcerpt": "AI Image Generation API | Free Text-to-Image - deAPI.ai Consent Details [#IABV2SETTINGS#] About We value your privacy We use cookies to improve user experience, analyze site usage via Google Analytics, and assist with our marketing efforts. You can manage your preferences below. [#GPC_BANNER_ICON#] [#GPC_TOAST_TEXT#] Consent Selection Necessary Preferences Statistics Marketing Show details Details Necessary 10 Necessary cookies help make a website usable by enabling basic functions like page navigation and access to secure areas of the website. The website cannot function properly without these cookies. Cookiebot 2 Learn more about this provider CookieConsent&nbsp;[x2] Stores the user's cookie consent state for the current domain Maximum Storage Duration : 1 year Type : HTTP Cookie Crisp 2 Learn more about this provider cookies.js Determines whether the visitor has accepted the cookie consent box. This ensures that the cookie consent box will not be presented again upon re-entry. Maximum Storage Duration : Session Type : HTTP Cookie crisp-client%2Fsession%2F#GUID# Pending Maximum Storage Duration : 6 months Type : HTTP Cookie Google 1 Learn more about this provider Some of the data collected by this provider is for the purposes of personalization and measuring advertising effectiveness. The provider may use the IP Addresses for ads measurement and ads personalization. test_cookie Used to check if the user's browser supports cookies. Maximum Storage Duration : 1 day Type : HTTP Cookie Twitter Inc. 2 Learn more about this provider __cf_bm&nbsp;[x2] This cookie is used to distinguish between humans and bots. This is beneficial for the website, in order to make valid reports on the use of their website. Maximum Storage Duration : 1 day Type : HTTP Cookie app.deapi.ai 1 pusherTransportTLS Technical cookie that synchronizes the website and the CMS. This is used to update the website. Maximum Storage Duration : Persistent Type : HTML Local Storage app.deapi.ai deapi.ai 2 XSRF-TOKEN&nbsp;[x2] Ensures visitor browsing-security by preventing cross-site request forgery. This cookie is essential for the security of the website and visitor. Maximum Storage Duration : 1 day Type : HTTP Cookie Preferences 3 Preference cookies enable a website to remember information that changes the way the website behaves or looks, like your preferred language or the region that you are in. Crisp 3 Learn more about this provider crisp-client/session/# Necessary for the functionality of the website's chat-box function. Maximum Storage Duration : Persistent Type : HTML Local Storage crisp-client/session/#:e Necessary for the functionality of the website's chat-box function. Maximum Storage Duration : Persistent Type : HTML Local Storage crisp-client/domain-detect/# Pending Maximum Storage Duration : Session Type : HTTP Cookie Statistics 7 Statistic cookies help website owners to understand how visitors interact with websites by collecting and reporting information anonymously. Google 2 Learn more about this provider Some of the data collected by this provider is for the purposes of personalization and measuring advertising effectiveness. The provider may use the IP Addresses for ads measurement and ads personalization. _ga Used to send data to Google Analytics about the visitor's device and behavior. Tracks the visitor across devices and marketing channels. Maximum Storage Duration : 2 years Type : HTTP Cookie _ga_# Used to send data to Google Analytics about the visitor's device and behavior. Tracks the visitor across devices and marketing channels. Maximum Storage Duration : 2 years Type : HTTP Cookie Microsoft 4 Learn more about this provider c.gif Collects data on the user’s navigation and behavior on the website. This is used to compile statistical reports and heatmaps for the website owner. Maximum Storage Duration : Session Type : Pixel Tracker _clck Collects data on the user’s navigation and behavior on the website. This is used to compile statistical reports and heatmaps for the website owner. Maximum Storage Duration : 1 year Type : HTTP Cookie _clsk Registers statistical data on users' behaviour on the website. Used for internal analytics by the website operator. Maximum Storage Duration : 1 day Type : HTTP Cookie _cltk Registers statistical data on users' behaviour on the website. Used for internal analytics by the website operator. Maximum Storage Duration : Session Type : HTML Local Storage Twitter Inc. 1 Learn more about this provider personalization_id This cookie is set by Twitter - The cookie allows the visitor to share content from the website onto their Twitter profile. Maximum Storage Duration : 400 days Type : HTTP Cookie Marketing 30 Marketing cookies are used to track visitors across websites. The intention is to display ads that are relevant and engaging for the individual user and thereby more valuable for publishers and third party advertisers. Google 3 Learn more about this provider Some of the data collected by this provider is for the purposes of personalization and measuring advertising effectiveness. The provider may use the IP Addresses for ads measurement and ads personalization. _gcl_au Used to measure the efficiency of the website’s advertisement efforts, by collecting data on the conversion rate of the website’s ads across multiple websites. Maximum Storage Duration : 3 months Type : HTTP Cookie pagead/1p-user-list/# Tracks if the user has shown interest in specific products or events across multiple websites and detects how the user navigates between sites. This is used for measurement of advertisement efforts and facilitates payment of referral-fees between websites. Maximum Storage Duration : Session Type : Pixel Tracker _gcl_ls Tracks the conversion rate between the user and the advertisement banners on the website - This serves to optimise the relevance of the advertisements on the website. Maximum Storage Duration : Persistent Type : HTML Local Storage Microsoft 7 Learn more ab"
+    },
+    "nscale_imagegen": {
+      "url": "https://docs.nscale.com/docs/use-cases/image-generation",
+      "error": "Function invoke failed with status 500: {\"result\":null,\"error\":\"Page reader failed: request failed with status 502: {\\\"errorMessage\\\":\\\"Process exited unexpectedly before completing request (duration: 1729ms, maxMemoryUsage: 855.10MB)\\\"}\"}"
+    }
+  }
+}

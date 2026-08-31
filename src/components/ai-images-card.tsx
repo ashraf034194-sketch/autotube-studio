@@ -10,7 +10,9 @@ import {
   Check,
   Clock,
   Layers,
-  Zap
+  Zap,
+  Boxes,
+  Wind
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,7 +29,7 @@ import { useToast } from '@/hooks/use-toast'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-type JobStatus = 'idle' | 'submitting' | 'processing' | 'done' | 'error'
+type JobStatus = 'idle' | 'submitting' | 'prompting' | 'processing' | 'done' | 'error'
 type ExposedStatus = 'idle' | 'generating' | 'done' | 'error'
 
 interface WaitingSlot {
@@ -45,9 +47,18 @@ interface SlotInfo {
   error?: string | null
 }
 
+/** One junction in the gated batch flow. Mirrors the server-side BatchState. */
+interface BatchStateInfo {
+  index: number
+  total: number
+  completed: number
+  failed: number
+  status: 'pending' | 'active' | 'done'
+}
+
 interface JobState {
   jobId: string
-  status: 'processing' | 'done' | 'error'
+  status: 'prompting' | 'processing' | 'done' | 'error'
   total: number
   completed: number
   waiting: number
@@ -56,8 +67,17 @@ interface JobState {
   waitingSlots: WaitingSlot[]
   slots: SlotInfo[]
   prompts: string[]
+  currentLabel?: string | null
   doneAt: number | null
   error?: string
+  // ── Junction (gated batch) flow ──────────────────────────────────────
+  batchGateSize?: number | null
+  batchesTotal?: number | null
+  currentBatch?: number | null
+  batchCompleted?: number | null
+  batchFailed?: number | null
+  batchInterlude?: boolean
+  batchStates?: BatchStateInfo[] | null
 }
 
 interface PostResponse {
@@ -69,19 +89,32 @@ interface PostResponse {
 // ─── Provider label / color (mirrors provider-chain-card) ─────────────────
 
 const PROVIDER_BADGE: Record<string, string> = {
-  custom: 'border-purple-500/40 bg-purple-500/15 text-purple-300',
-  google: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300',
-  zai: 'border-amber-500/40 bg-amber-500/15 text-amber-300',
-  cloudflare: 'border-orange-500/40 bg-orange-500/15 text-orange-300',
-  pollinations: 'border-teal-500/40 bg-teal-500/15 text-teal-300'
+  // SIMPLIFIED 3-tier chain — only Pexels, Unsplash, Z.ai.
+  //   Pexels + Unsplash = stock photo libraries (Tier 0)
+  //   Z.ai = AI-generation fallback (Tier 1)
+  // (Removed: stability, grok, nanoBanana2, custom, google, cloudflare,
+  // pollinations — all were permanently "skip" because their keys were
+  // never configured.)
+  pexels: 'border-sky-500/40 bg-sky-500/15 text-sky-300',
+  unsplash: 'border-slate-400/40 bg-slate-400/15 text-slate-200',
+  zai: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
-  custom: 'Manus',
-  google: 'Google',
-  zai: 'Z.ai',
-  cloudflare: 'Cloudflare',
-  pollinations: 'Pollinations'
+  // SIMPLIFIED 3-tier chain — only Pexels, Unsplash, Z.ai.
+  pexels: 'Pexels',
+  unsplash: 'Unsplash',
+  zai: 'Z.ai'
+}
+
+/**
+ * Returns "Stock" or "AI" category label for a provider — used to group the
+ * thumbnails visually (stock photos vs AI-generated) in the done-summary.
+ */
+function providerCategory(provider?: string | null): 'stock' | 'ai' | null {
+  if (!provider) return null
+  if (provider === 'pexels' || provider === 'unsplash') return 'stock'
+  return 'ai'
 }
 
 // ─── fetchJson (same pattern as page.tsx) ───────────────────────────────────
@@ -113,9 +146,19 @@ async function fetchJson(
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
+interface VoiceoverChunkForImages {
+  text: string
+  startMs: number
+  endMs: number
+}
+
 interface AIImagesCardProps {
   script: string
   voiceoverDuration: number | null
+  /** Per-segment script chunks from the voiceover — preferred path. When
+   *  present, image N visualizes the EXACT text chunk N (true script-image
+   *  match). Falls back to {text, durationSeconds} when absent. */
+  voiceoverChunks: VoiceoverChunkForImages[] | null
   onStatusChange?: (status: ExposedStatus) => void
   /** Fired when the image job finishes successfully, exposing the image jobId + total count so downstream phases (video assembly) can consume them. */
   onJobReady?: (jobId: string, total: number) => void
@@ -124,6 +167,7 @@ interface AIImagesCardProps {
 export function AIImagesCard({
   script,
   voiceoverDuration,
+  voiceoverChunks,
   onStatusChange,
   onJobReady
 }: AIImagesCardProps) {
@@ -182,7 +226,18 @@ export function AIImagesCard({
           }
           const data = json as unknown as JobState
           setJob(data)
-          if (data.status === 'done') {
+          // Transition local FSM based on the server-side phase.
+          // - 'prompting' = LLM still writing the per-segment image prompts
+          //   (this is the phase that previously blocked POST and caused 502)
+          // - 'processing' = prompts ready, image-gen workers running
+          // - 'done' / 'error' = terminal
+          if (data.status === 'prompting') {
+            setStatus('prompting')
+            notifyStatus('generating')
+          } else if (data.status === 'processing') {
+            setStatus('processing')
+            notifyStatus('generating')
+          } else if (data.status === 'done') {
             stopPolling()
             setStatus('done')
             notifyStatus('done')
@@ -241,37 +296,42 @@ export function AIImagesCard({
     notifyStatus('generating')
 
     try {
+      // PREFERRED path: send voiceover chunks so image N visualizes the EXACT
+      // text chunk N (true script-image match). Fall back to {text, durationSeconds}
+      // only when chunks aren't available (older voiceover or none).
+      const postBody = voiceoverChunks && voiceoverChunks.length > 0
+        ? { chunks: voiceoverChunks }
+        : { text, durationSeconds: voiceoverDuration }
       const { ok, status: httpStatus, json } = await fetchJson('/api/images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, durationSeconds: voiceoverDuration })
+        body: JSON.stringify(postBody)
       })
       const startData = json as Partial<PostResponse> & { error?: string }
       if (!ok || !startData.jobId) {
         throw new Error(startData.error || `Request failed with status ${httpStatus}`)
       }
 
-      // Seed the local job state from POST response so the UI shows a grid
-      // immediately, before the first poll arrives.
-      const prompts = startData.prompts ?? []
+      // POST returns immediately with the target count (no prompts yet — they
+      // are generated in the background by the LLM). Seed the local job state
+      // so the UI can show the "prompting" skeleton right away.
+      const targetTotal = startData.total ?? 0
       setJob({
         jobId: startData.jobId,
-        status: 'processing',
-        total: startData.total ?? prompts.length,
+        status: 'prompting',
+        total: targetTotal,
         completed: 0,
         waiting: 0,
         failed: 0,
         progress: 0,
         waitingSlots: [],
-        slots: prompts.map((_, i) => ({
-          index: i,
-          status: 'pending' as const,
-          retryCount: 0
-        })),
-        prompts,
+        slots: [],
+        prompts: [],
+        currentLabel: `Crafting ${targetTotal} image prompts from the script`,
         doneAt: null
       })
-      setStatus('processing')
+      setStatus('prompting')
+      notifyStatus('generating')
       startPolling(startData.jobId)
     } catch (err) {
       const message =
@@ -285,16 +345,18 @@ export function AIImagesCard({
         description: message
       })
     }
-  }, [script, voiceoverDuration, notifyStatus, startPolling, toast])
+  }, [script, voiceoverDuration, voiceoverChunks, notifyStatus, startPolling, toast])
 
   const canGenerate =
     !!script.trim() &&
     !!voiceoverDuration &&
     voiceoverDuration >= 4 &&
     status !== 'submitting' &&
+    status !== 'prompting' &&
     status !== 'processing'
 
-  const isBusy = status === 'submitting' || status === 'processing'
+  const isBusy =
+    status === 'submitting' || status === 'prompting' || status === 'processing'
 
   // Compute remaining wait per waiting slot (in whole seconds, floored).
   const waitingSlotsWithWait = (job?.waitingSlots ?? []).map((w) => {
@@ -304,20 +366,29 @@ export function AIImagesCard({
     return { ...w, remainingSeconds: remaining }
   })
 
-  const imageCount = voiceoverDuration
-    ? Math.max(1, Math.ceil(voiceoverDuration / 4))
-    : 0
+  // EXACT count when voiceover chunks are available (the API will generate
+  // exactly 1 image per chunk). Falls back to the 4s-per-image estimate only
+  // before the voiceover exists (so the user gets a sensible preview number).
+  // Previously this used ONLY the estimate, which disagreed with the actual
+  // chunk count produced by the 80-char chunker — UI said "21" but API
+  // generated 13. Now the UI shows the EXACT count once voiceover is done.
+  const imageCount =
+    voiceoverChunks && voiceoverChunks.length > 0
+      ? voiceoverChunks.length
+      : voiceoverDuration
+        ? Math.max(1, Math.ceil(voiceoverDuration / 4))
+        : 0
 
   return (
     <Card
-      className={`border bg-zinc-900/50 transition-colors ${
+      className={`border bg-zinc-900/40 backdrop-blur-sm transition-colors ${
         isBusy
           ? 'border-red-500/40'
           : status === 'done'
             ? 'border-emerald-500/30'
             : status === 'error'
               ? 'border-red-500/40'
-              : 'border-zinc-800/80'
+              : 'border-zinc-800/60'
       }`}
     >
       <CardHeader className="pb-3">
@@ -350,64 +421,62 @@ export function AIImagesCard({
           ) : null}
         </div>
         <CardDescription>
-          One cinematic image per ~4 seconds of narration. The 5-tier chain
-          tries Manus → Google → Z.ai → Cloudflare → Pollinations, retrying
-          throttled providers with backoff until every slot succeeds.
+          Hybrid engine: concrete scenes try legal stock photos (Pexels → Unsplash) first, abstract concepts use AI generation. 20 images per junction.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Action row */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-1">
-              <p className="text-xs text-zinc-400">
-                {voiceoverDuration ? (
-                  <>
-                    Will generate{' '}
-                    <span className="font-semibold text-red-400">{imageCount}</span>{' '}
-                    images (1 per 4s of narration)
-                  </>
-                ) : (
-                  <span className="text-zinc-500">
-                    Voiceover duration needed to size the image set.
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-zinc-600">
-                Prompts are auto-generated from the rewritten script, then drawn
-                through the fallback chain.
-              </p>
-            </div>
-            <Button
-              type="button"
-              size="lg"
-              onClick={handleGenerate}
-              disabled={!canGenerate && status !== 'done'}
-              className="h-12 rounded-xl bg-red-600 px-6 text-sm font-semibold text-white shadow-lg shadow-red-600/25 transition-colors hover:bg-red-500 disabled:opacity-60"
-            >
-              {status === 'submitting' ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                  Starting…
-                </>
-              ) : status === 'processing' ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                  Generating…
-                </>
-              ) : status === 'done' ? (
-                <>
-                  <RefreshCw className="h-5 w-5" aria-hidden="true" />
-                  Regenerate
-                </>
-              ) : (
-                <>
-                  <ImageIcon className="h-5 w-5" aria-hidden="true" />
-                  Generate Images
-                </>
-              )}
-            </Button>
+          {/* Info chips — horizontal, professional */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {voiceoverDuration ? (
+              <>
+                <span className="inline-flex items-center gap-1 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-0.5 font-semibold text-red-400">
+                  {imageCount} images
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-400">
+                  {Math.max(1, Math.ceil(imageCount / 20))} junctions of 20
+                </span>
+                <span className="text-zinc-500">Prompts auto-generated from the script.</span>
+              </>
+            ) : (
+              <span className="text-zinc-500">Voiceover duration needed to size the image set.</span>
+            )}
           </div>
+          {/* Generate Images — full-width bottom bar */}
+          <Button
+            type="button"
+            size="lg"
+            onClick={handleGenerate}
+            disabled={!canGenerate && status !== 'done'}
+            className="h-12 w-full rounded-xl bg-gradient-to-r from-red-600 to-orange-500 px-6 text-sm font-semibold text-white shadow-lg shadow-red-600/25 transition-all hover:from-red-500 hover:to-orange-400 disabled:opacity-60"
+          >
+            {status === 'submitting' ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                Starting…
+              </>
+            ) : status === 'prompting' ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                Crafting prompts…
+              </>
+            ) : status === 'processing' ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                Generating…
+              </>
+            ) : status === 'done' ? (
+              <>
+                <RefreshCw className="h-5 w-5" aria-hidden="true" />
+                Regenerate
+              </>
+            ) : (
+              <>
+                <ImageIcon className="h-5 w-5" aria-hidden="true" />
+                Generate Images
+              </>
+            )}
+          </Button>
 
           {/* Body states */}
           {status === 'submitting' ? (
@@ -420,7 +489,7 @@ export function AIImagesCard({
             >
               <p className="flex items-center gap-2 text-sm font-medium text-red-400">
                 <Zap className="h-4 w-4 animate-pulse" aria-hidden="true" />
-                Crafting image prompts from your script…
+                Submitting image job…
               </p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
                 {Array.from({ length: 10 }).map((_, i) => (
@@ -431,9 +500,43 @@ export function AIImagesCard({
                   />
                 ))}
               </div>
+            </motion.div>
+          ) : status === 'prompting' ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-3 py-2"
+              aria-live="polite"
+            >
+              <p className="flex items-center gap-2 text-sm font-medium text-red-400">
+                <Zap className="h-4 w-4 animate-pulse" aria-hidden="true" />
+                {job?.currentLabel ?? 'Crafting image prompts from your script…'}
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <span>
+                    Target: <span className="font-semibold text-zinc-300">{job?.total ?? 0}</span> images
+                  </span>
+                  <span className="font-mono tabular-nums text-amber-400">LLM working…</span>
+                </div>
+                <Progress
+                  value={0}
+                  aria-label="Prompt generation progress"
+                  className="h-2 bg-zinc-800 [&>div]:bg-amber-500"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="aspect-video animate-pulse rounded-md bg-zinc-800"
+                    style={{ animationDelay: `${i * 80}ms` }}
+                  />
+                ))}
+              </div>
               <p className="text-xs text-zinc-500">
-                Splitting the narration into one scene per ~4s, then drawing each
-                frame through the provider chain.
+                Splitting the narration into one scene per ~4s. Long voiceovers take a few minutes — runs in the background.
               </p>
             </motion.div>
           ) : status === 'error' ? (
@@ -464,6 +567,9 @@ export function AIImagesCard({
               className="space-y-4"
               aria-live="polite"
             >
+              {/* Junction flow — 20-at-a-time gated batch visualization */}
+              <JunctionFlow job={job} />
+
               {/* Progress bar */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-zinc-400">
@@ -522,13 +628,40 @@ export function AIImagesCard({
                 </div>
               )}
 
-              {/* Done banner */}
-              {status === 'done' && (
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-300">
-                  <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  All {job.total} images generated. Ready for video assembly.
-                </div>
-              )}
+              {/* Done banner — with Stock vs AI breakdown */}
+              {status === 'done' && (() => {
+                const stockCount = job.slots.filter(
+                  (s) => s.provider === 'pexels' || s.provider === 'unsplash'
+                ).length
+                const aiCount = job.total - stockCount
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-300">
+                      <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      All {job.total} images generated. Ready for video assembly.
+                    </div>
+                    {/* Source breakdown chips */}
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      {stockCount > 0 && (
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 font-semibold text-sky-300">
+                          <span className="h-1.5 w-1.5 rounded-full bg-sky-400" aria-hidden="true" />
+                          {stockCount} Stock {stockCount === 1 ? 'photo' : 'photos'}
+                          <span className="text-sky-500/70">·</span>
+                          <span className="font-normal text-sky-400/80">Pexels + Unsplash</span>
+                        </span>
+                      )}
+                      {aiCount > 0 && (
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-300">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+                          {aiCount} AI-generated
+                          <span className="text-amber-500/70">·</span>
+                          <span className="font-normal text-amber-400/80">concrete→stock-miss OR abstract</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Thumbnails grid (scrollable) */}
               <div className="scrollbar-thin max-h-96 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/40 p-2">
@@ -554,8 +687,8 @@ export function AIImagesCard({
               </p>
               <p className="max-w-xs text-xs leading-relaxed text-zinc-500">
                 {voiceoverDuration
-                  ? 'Hit “Generate Images” to derive prompts from the script and render one cinematic frame per ~4 seconds.'
-                  : 'Generate a voiceover first — its measured duration drives the number of images.'}
+                  ? 'Hit “Generate Images” to render one cinematic frame per chunk.'
+                  : 'Generate a voiceover first — its duration drives the image count.'}
               </p>
             </div>
           )}
@@ -643,6 +776,157 @@ function ThumbCell({ slot, jobId, prompt }: ThumbCellProps) {
       <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 py-0.5 text-[10px] font-mono text-zinc-400">
         #{slot.index + 1}
       </span>
+    </div>
+  )
+}
+
+// ─── Junction flow visualization (20-at-a-time gated batch) ──────────────────
+//
+// Renders the user-requested "junction" concept: the whole image set is split
+// into batches of 20. One junction is active at a time; when it fully settles
+// (20 images done/failed), the tool breathes ~1.5s, then the next junction
+// starts. This panel makes that flow visible:
+//   • a row of junction pills (done=green check, active=pulsing, pending=gray)
+//   • a thin progress bar for the CURRENT junction only (out of 20)
+//   • a "breathing…" indicator during the inter-junction pause
+//   • the junction math (e.g. "100 images ÷ 20 = 5 junctions")
+//
+// Renders nothing when the job is single-junction (≤20 images) or when batch
+// fields aren't yet populated (early processing tick).
+
+interface JunctionFlowProps {
+  job: JobState
+}
+
+function JunctionFlow({ job }: JunctionFlowProps) {
+  const batchesTotal = job.batchesTotal ?? null
+  const batchStates = job.batchStates ?? null
+  const currentBatch = job.currentBatch ?? 0
+  const batchCompleted = job.batchCompleted ?? 0
+  const batchFailed = job.batchFailed ?? 0
+  const gateSize = job.batchGateSize ?? 20
+  const interlude = job.batchInterlude ?? false
+
+  // Hide when there's only one junction (no flow to visualize) or before the
+  // server has populated the batch fields.
+  if (!batchesTotal || batchesTotal <= 1 || !batchStates || batchStates.length === 0) {
+    return null
+  }
+
+  // Current junction progress = completed within this junction / junction size.
+  // Use the batchStates entry for the active junction when available so the bar
+  // reflects settled images even after the cursor advanced.
+  const activeBatchState = batchStates[currentBatch - 1] ?? null
+  const activeBatchTotal = activeBatchState?.total ?? gateSize
+  const activeBatchDone = activeBatchState?.completed ?? batchCompleted
+  const activeBatchFailed = activeBatchState?.failed ?? batchFailed
+  const activeBatchProgress = activeBatchTotal > 0
+    ? Math.round(((activeBatchDone + activeBatchFailed) / activeBatchTotal) * 100)
+    : 0
+
+  return (
+    <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+      {/* Header row: icon + "Junction X/Y" + breathing indicator */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-amber-300">
+          <Boxes className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            Junction{' '}
+            <span className="font-mono tabular-nums text-amber-200">
+              {currentBatch > 0 ? currentBatch : '—'}/{batchesTotal}
+            </span>
+          </span>
+          <span className="text-xs font-normal text-amber-500/70">
+            · 20 images at a time
+          </span>
+        </div>
+        {interlude ? (
+          <span className="flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-300">
+            <Wind className="h-3.5 w-3.5 animate-pulse" aria-hidden="true" />
+            breathing…
+          </span>
+        ) : currentBatch > 0 && currentBatch < batchesTotal ? (
+          <span className="text-xs text-amber-500/70">
+            {batchesTotal - currentBatch} junction{batchesTotal - currentBatch > 1 ? 's' : ''} left
+          </span>
+        ) : currentBatch >= batchesTotal ? (
+          <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+            final junction
+          </span>
+        ) : null}
+      </div>
+
+      {/* Junction math line */}
+      <p className="text-xs leading-relaxed text-amber-200/70">
+        <span className="font-mono tabular-nums text-amber-200">{job.total}</span> images ÷{' '}
+        <span className="font-mono tabular-nums text-amber-200">{gateSize}</span> ={' '}
+        <span className="font-mono tabular-nums text-amber-200">{batchesTotal}</span> junctions · tool breathes ~1.5s between each.
+      </p>
+
+      {/* Junction pills row — one pill per junction, scrollable on mobile */}
+      <div className="flex flex-wrap gap-1.5">
+        {batchStates.map((bs) => {
+          const isActive = bs.status === 'active'
+          const isDone = bs.status === 'done'
+          const isPending = bs.status === 'pending'
+          const pillProgress = bs.total > 0 ? Math.round(((bs.completed + bs.failed) / bs.total) * 100) : 0
+          return (
+            <span
+              key={bs.index}
+              title={`Junction ${bs.index + 1}: ${bs.completed}/${bs.total} done${bs.failed > 0 ? `, ${bs.failed} failed` : ''}`}
+              className={[
+                'flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
+                isDone
+                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                  : isActive
+                    ? 'border-amber-400/60 bg-amber-500/20 text-amber-200'
+                    : 'border-zinc-700 bg-zinc-800/50 text-zinc-500'
+              ].join(' ')}
+            >
+              {isDone ? (
+                <Check className="h-3 w-3 shrink-0" aria-hidden="true" />
+              ) : isActive ? (
+                <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden="true" />
+              ) : (
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-50" aria-hidden="true" />
+              )}
+              <span className="font-mono tabular-nums">
+                J{bs.index + 1}
+              </span>
+              {isPending ? null : (
+                <span className="font-mono tabular-nums opacity-70">
+                  {bs.completed}/{bs.total}
+                </span>
+              )}
+              {isActive && pillProgress > 0 && (
+                <span className="font-mono tabular-nums opacity-60">{pillProgress}%</span>
+              )}
+            </span>
+          )
+        })}
+      </div>
+
+      {/* Current-junction thin progress bar */}
+      {currentBatch > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] text-amber-300/80">
+            <span>
+              Current junction —{' '}
+              <span className="font-mono tabular-nums">
+                {activeBatchDone}/{activeBatchTotal}
+              </span>{' '}
+              images{activeBatchFailed > 0 ? ` · ${activeBatchFailed} failed` : ''}
+            </span>
+            <span className="font-mono tabular-nums">{activeBatchProgress}%</span>
+          </div>
+          <Progress
+            value={activeBatchProgress}
+            aria-label={`Junction ${currentBatch} of ${batchesTotal} progress`}
+            className="h-1.5 bg-amber-950/50 [&>div]:bg-amber-400"
+          />
+        </div>
+      )}
     </div>
   )
 }

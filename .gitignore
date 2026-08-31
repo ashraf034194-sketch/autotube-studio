@@ -59,3 +59,10 @@ download/*.zip
 download/*.bundle
 download/BACKUP-README.txt
 download/*.tar.gz
+
+# Internal progress log — local only, do not push to public repo
+worklog.md
+
+# Sandbox / dev-orchestration artifacts (PID files, runtime logs)
+.zscripts/dev.pid
+.zscripts/dev.log

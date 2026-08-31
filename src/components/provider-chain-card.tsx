@@ -28,25 +28,28 @@ interface ProvidersResponse {
   providers: ProviderStatus[]
 }
 
-// ─── Tier → dot color (NO indigo/blue) ────────────────────────────────────
-//   T1 Manus  → purple
-//   T2 Google → emerald
-//   T3 Z.ai   → amber
-//   T4 Cloud  → orange
-//   T5 Poll   → teal
+// ─── Tier → dot color (positional, reflects the 3-tier SIMPLIFIED chain) ───
+//   T0 Pexels       → sky      (stock photo library, 200 req/hour, free)
+//   T0 Unsplash     → slate    (stock photo library, 50 req/hour, free)
+//   T1 Z.ai         → emerald  (AI-generation, always-live bundled SDK)
+//
+// The first two tiers are STOCK PHOTO providers — they're tried first for
+// concrete content (person, place, object). If both miss, Z.ai (AI-
+// generation) runs as the fallback. For abstract content (metaphor,
+// concept), the stock tiers are skipped entirely and Z.ai handles it.
+//
+// Load distribution target: ~75% Pexels+Unsplash, ~25% Z.ai — achieved
+// naturally by the content-detector biasing generic/everyday prompts
+// toward stock photos.
 const TIER_DOT: string[] = [
-  'bg-purple-500',
-  'bg-emerald-500',
-  'bg-amber-500',
-  'bg-orange-500',
-  'bg-teal-500'
+  'bg-sky-500',
+  'bg-slate-400',
+  'bg-emerald-500'
 ]
 const TIER_GLOW: string[] = [
-  'shadow-purple-500/30',
-  'shadow-emerald-500/30',
-  'shadow-amber-500/30',
-  'shadow-orange-500/30',
-  'shadow-teal-500/30'
+  'shadow-sky-500/30',
+  'shadow-slate-400/30',
+  'shadow-emerald-500/30'
 ]
 
 // ─── fetchJson (same pattern as page.tsx) ───────────────────────────────────
@@ -117,21 +120,21 @@ export function ProviderChainCard() {
   }, [load])
 
   const tierCount = data?.configured ?? 0
-  const totalTiers = data?.total ?? 5
+  const totalTiers = data?.total ?? 3
   const badgeClass =
     tierCount === totalTiers
       ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-      : tierCount >= 3
+      : tierCount >= 2
         ? 'border-amber-500/40 bg-amber-500/10 text-amber-400'
         : 'border-red-500/40 bg-red-500/10 text-red-400'
 
   return (
-    <Card className="border-zinc-800/80 bg-zinc-900/50">
+    <Card className="border-zinc-800/60 bg-zinc-900/40 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Layers className="h-4 w-4 text-zinc-400" aria-hidden="true" />
-            Image Generation — 5-Tier Fallback Chain
+            Image Generation Chain
           </CardTitle>
           {!loading && !error && data && (
             <Badge
@@ -143,15 +146,13 @@ export function ProviderChainCard() {
           )}
         </div>
         <CardDescription>
-          Each image is tried through up to 5 providers in order. If a tier is
-          unavailable, throttled, or fails, the next one takes over — so
-          generation always completes.
+          3-tier hybrid: Stock photos (Pexels → Unsplash) first for concrete scenes, then Z.ai (AI) for abstract concepts or stock misses. ~75% stock / ~25% AI load split.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {loading && !data ? (
           <div className="space-y-3 py-1" aria-live="polite">
-            {[0, 1, 2, 3, 4].map((i) => (
+            {[0, 1, 2].map((i) => (
               <div key={i} className="flex items-center gap-3 pb-3 last:pb-0">
                 <div className="h-3 w-3 shrink-0 animate-pulse rounded-full bg-zinc-800" />
                 <div className="flex-1 space-y-2">
@@ -212,7 +213,7 @@ export function ProviderChainCard() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                        Tier {i + 1}
+                        {i < 2 ? 'Stock' : 'AI'}
                       </span>
                       <span
                         className={`text-sm font-medium ${

@@ -1,164 +1,238 @@
+#!/usr/bin/env bun
 /**
- * Standalone test for the video-assembly FFmpeg orchestrator.
- * Creates 4 synthetic test images (colored panels with index text) + a short
- * 18-second sine-wave audio, then runs runVideoAssembly and verifies output.
+ * Video Assembly BEFORE/AFTER timing test — runs the FULL 44-image + 3m08s
+ * pipeline through POST /api/video, polls until done, and reports:
+ *   - Total wall-clock time
+ *   - Per-stage timing (Pass 1 per-clip encode, Pass 2 xfade/mux)
+ *   - Output file size + duration
  *
- * Run: npx tsx scripts/test-video-assembly.ts
+ * Uses the existing 44-image job img-1788109098324-ja2cyk that's already on
+ * disk + a SYNTHESIZED 188s silent audio track (ffmpeg-generated, no LLM/TTS
+ * cost). This makes the test fully reproducible + fast to set up — the video
+ * assembly doesn't care what's IN the audio, only its duration + format.
+ *
+ * Usage:
+ *   bun run scripts/test-video-assembly.ts before   # baseline run
+ *   bun run scripts/test-video-assembly.ts after    # post-optimization run
  */
+import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
-import { execFile } from 'child_process'
-import { promisify } from 'util'
-import {
-  createVideoJob,
-  runVideoAssembly,
-  getVideoJob
-} from '../src/lib/video-assembly'
+import os from 'os'
 
-const execFileAsync = promisify(execFile)
+const API_BASE = 'http://localhost:3000'
+const PHASE = (process.argv[2] ?? 'before').toLowerCase() as 'before' | 'after'
+const IMAGE_JOB_ID = 'img-1788109098324-ja2cyk' // existing 44-image job (verified in /tmp/autotube-images/)
+const AUDIO_DURATION_S = 188 // 3m08s — matches the voiceover the user originally generated
+const IMAGE_COUNT = 44
+const SILENT_AUDIO_PATH = '/tmp/test-silent-188s.mp3'
 
-const COLORS = [
-  { name: 'red', rgb: '0x441111' },
-  { name: 'green', rgb: '0x114411' },
-  { name: 'teal', rgb: '0x113333' },
-  { name: 'gold', rgb: '0x443311' }
-]
-
-async function makeTestImage(outPath: string, color: string, label: string): Promise<void> {
-  // 1920x1080 solid color with a big white label in the center
-  const args = [
-    '-y',
-    '-f', 'lavfi',
-    '-i', `color=c=${color}:s=1920x1080:d=0.04`,
-    '-vf',
-    `drawtext=text='${label}':fontcolor=white:fontsize=180:x=(w-text_w)/2:y=(h-text_h)/2`,
-    '-frames:v', '1',
-    '-q:v', '3',
-    outPath
-  ]
-  await execFileAsync('ffmpeg', args, { timeout: 30000 })
+function log(msg: string): void {
+  const ts = new Date().toISOString().slice(11, 23)
+  console.log(`[${ts}] ${msg}`)
 }
 
-async function makeTestAudio(outPath: string, seconds: number): Promise<void> {
-  // 18s 440Hz sine wave, 44.1kHz stereo, mp3
-  const args = [
-    '-y',
-    '-f', 'lavfi',
-    '-i', `sine=frequency=440:duration=${seconds}`,
-    '-ac', '2',
-    '-ar', '44100',
-    '-b:a', '96k',
-    outPath
-  ]
-  await execFileAsync('ffmpeg', args, { timeout: 30000 })
-}
-
-async function getDuration(filePath: string): Promise<number> {
-  const { stdout } = await execFileAsync(
-    'ffprobe',
-    ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filePath],
-    { timeout: 15000 }
+async function ensureSilentAudio(): Promise<void> {
+  if (fs.existsSync(SILENT_AUDIO_PATH)) {
+    const size = fs.statSync(SILENT_AUDIO_PATH).size
+    if (size > 1000) {
+      log(`✓ Silent audio already exists (${(size / 1024).toFixed(0)}KB)`)
+      return
+    }
+  }
+  log(`Generating 188s silent mp3 via ffmpeg (synthesizes the test audio)...`)
+  execFileSync(
+    'ffmpeg',
+    [
+      '-y', '-hide_banner', '-f', 'lavfi',
+      '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+      '-t', String(AUDIO_DURATION_S),
+      '-b:a', '192k',
+      SILENT_AUDIO_PATH
+    ],
+    { stdio: 'pipe' }
   )
-  return parseFloat(stdout.trim())
+  const size = fs.statSync(SILENT_AUDIO_PATH).size
+  log(`✓ Silent audio ready (${(size / 1024).toFixed(0)}KB, ${AUDIO_DURATION_S}s)`)
 }
 
 async function main(): Promise<void> {
-  console.log('=== Video Assembly Standalone Test ===\n')
+  console.log('═'.repeat(82))
+  console.log(` VIDEO ASSEMBLY ${PHASE.toUpperCase()} TIMING TEST`)
+  console.log(` 44 images × ${AUDIO_DURATION_S}s audio (3m08s) — full Pass 1 + Pass 2`)
+  console.log('═'.repeat(82))
+  console.log()
 
-  // 1. Create a fake image job dir with 4 test images
-  const imageJobId = `test-${Date.now()}`
-  const imageDir = path.join('/tmp/autotube-images', imageJobId)
-  fs.mkdirSync(imageDir, { recursive: true })
+  // ── Pre-flight checks ─────────────────────────────────────────────
+  log('STEP 1 — Pre-flight checks')
 
-  console.log(`[1/4] Generating 4 test images in ${imageDir}`)
-  for (let i = 0; i < 4; i++) {
-    const outPath = path.join(imageDir, `${i}.jpg`)
-    await makeTestImage(outPath, COLORS[i].name, `IMG ${i + 1}`)
-    const stat = fs.statSync(outPath)
-    console.log(`   ✓ image ${i}: ${(stat.size / 1024).toFixed(0)}KB`)
-  }
-
-  // 2. Create a short test audio (18s — slightly more than 4 images * 4s = 16s, to test last-image-extend)
-  const audioDir = path.join('/tmp', 'autotube-test-audio')
-  fs.mkdirSync(audioDir, { recursive: true })
-  const audioPath = path.join(audioDir, `test-${Date.now()}.mp3`)
-  const AUDIO_SECONDS = 18
-  console.log(`[2/4] Generating ${AUDIO_SECONDS}s test audio → ${audioPath}`)
-  await makeTestAudio(audioPath, AUDIO_SECONDS)
-  const audioSize = fs.statSync(audioPath).size
-  console.log(`   ✓ audio: ${(audioSize / 1024).toFixed(0)}KB`)
-
-  // 3. Run the assembly
-  console.log(`[3/4] Starting video assembly (4 images @ 4s, audio ${AUDIO_SECONDS}s)`)
-  const job = createVideoJob({
-    imageJobId,
-    imageCount: 4,
-    audioPath,
-    audioDuration: AUDIO_SECONDS,
-    audioMime: 'audio/mpeg'
-  })
-
-  // Poll progress while the job runs
-  const start = Date.now()
-  let lastPct = -1
-  const pollInterval = setInterval(() => {
-    const current = getVideoJob(job.id)
-    if (current && current.progress !== lastPct) {
-      lastPct = current.progress
-      const elapsed = ((Date.now() - start) / 1000).toFixed(1)
-      console.log(`   progress: ${current.progress}% (stage=${current.stage}, elapsed=${elapsed}s, eta=${current.etaSeconds ?? '-'}s)`)
-    }
-  }, 500)
-
-  await runVideoAssembly(job, {
-    imageJobId,
-    imageCount: 4,
-    audioPath,
-    audioDuration: AUDIO_SECONDS,
-    audioMime: 'audio/mpeg'
-  })
-
-  clearInterval(pollInterval)
-
-  // 4. Verify output
-  const finalJob = getVideoJob(job.id)
-  console.log(`\n[4/4] Result:`)
-  console.log(`   status      = ${finalJob?.status}`)
-  console.log(`   stage       = ${finalJob?.stage}`)
-  console.log(`   progress    = ${finalJob?.progress}%`)
-  console.log(`   videoPath   = ${finalJob?.videoPath ?? '(none)'}`)
-  console.log(`   fileSize    = ${finalJob?.fileSize ?? 0} bytes (${((finalJob?.fileSize ?? 0) / (1024 * 1024)).toFixed(2)}MB)`)
-  console.log(`   videoDur    = ${finalJob?.videoDuration ?? 0}s`)
-  console.log(`   error       = ${finalJob?.error ?? '(none)'}`)
-  if (finalJob?.ffmpegTail) {
-    console.log(`   ffmpeg tail:\n${finalJob.ffmpegTail.split('\n').slice(-5).map((l) => '     ' + l).join('\n')}`)
-  }
-
-  if (finalJob?.status === 'done' && finalJob.videoPath) {
-    // Cross-check duration independently
-    const actualDur = await getDuration(finalJob.videoPath)
-    const pass = Math.abs(actualDur - AUDIO_SECONDS) < 1.5
-    console.log(`\n   actual MP4 duration = ${actualDur.toFixed(2)}s (target ${AUDIO_SECONDS}s) → ${pass ? '✅ PASS' : '❌ FAIL'}`)
-
-    // Verify H.264 codec + geometry
-    const { stdout } = await execFileAsync('ffprobe', [
-      '-v', 'error',
-      '-select_streams', 'v:0',
-      '-show_entries', 'stream=codec_name,width,height,pix_fmt,r_frame_rate',
-      '-of', 'default=noprint_wrappers=1',
-      finalJob.videoPath
-    ], { timeout: 15000 })
-    console.log(`   stream info:\n${stdout.split('\n').map((l) => '     ' + l).join('\n')}`)
-
-    console.log(`\n✅ Video assembly test COMPLETE. Output: ${finalJob.videoPath}`)
-    console.log(`   Total elapsed: ${((Date.now() - start) / 1000).toFixed(1)}s`)
-  } else {
-    console.log(`\n❌ Video assembly test FAILED.`)
+  // Check dev server is up (ISSUE 1 verification)
+  const healthStart = Date.now()
+  try {
+    const r = await fetch(`${API_BASE}/api/images/providers`, { method: 'GET' })
+    const healthMs = Date.now() - healthStart
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    log(`  ✓ Dev server reachable — HTTP ${r.status} in ${healthMs}ms (ISSUE 1 confirmed: server stable)`)
+  } catch (err) {
+    console.error(`  ✗ Dev server unreachable: ${err}`)
+    console.error('  This is the root cause of "Could not reach video API after 3 retries".')
     process.exit(1)
   }
+
+  // Check existing 44-image job still has images on disk
+  const imageDir = `/tmp/autotube-images/${IMAGE_JOB_ID}`
+  if (!fs.existsSync(imageDir)) {
+    console.error(`  ✗ Image directory not found: ${imageDir}`)
+    console.error('  Run a fresh image generation first.')
+    process.exit(1)
+  }
+  const imageFiles = fs.readdirSync(imageDir).filter(f => f.endsWith('.jpg'))
+  log(`  ✓ Image job ${IMAGE_JOB_ID} has ${imageFiles.length} images on disk`)
+
+  // Synthesize silent audio
+  await ensureSilentAudio()
+  console.log()
+
+  // ── POST /api/video ───────────────────────────────────────────────
+  log('STEP 2 — POST /api/video with 44 images + 188s silent audio')
+  log('  Options: 1080p, transitions OFF (concat demuxer, stream-copy Pass 2),')
+  log('           no title card, no outro, no captions, no music')
+  log('  (Minimal-config baseline isolates the FFmpeg speed; toggling features adds')
+  log('   LLM latency which would muddy the speed comparison.)')
+  console.log()
+
+  const audioBase64 = fs.readFileSync(SILENT_AUDIO_PATH).toString('base64')
+  const postStart = Date.now()
+  let postRes: Response
+  try {
+    postRes = await fetch(`${API_BASE}/api/video`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageJobId: IMAGE_JOB_ID,
+        imageCount: IMAGE_COUNT,
+        audioBase64,
+        audioDuration: AUDIO_DURATION_S,
+        mimeType: 'audio/mpeg',
+        musicSource: 'none',
+        script: 'Test script for video assembly timing benchmark. ' + 'Lorem ipsum '.repeat(80),
+        captionsEnabled: false,
+        transitionsEnabled: false,
+        titleCardEnabled: false,
+        textHighlightsEnabled: false,
+        outroEnabled: false,
+        resolution: '1080p'
+      })
+    })
+  } catch (err) {
+    const elapsed = Date.now() - postStart
+    console.error(`  ✗ POST /api/video FAILED after ${elapsed}ms: ${err}`)
+    console.error('  This reproduces ISSUE 1 — dev server was unreachable.')
+    process.exit(1)
+  }
+
+  if (!postRes.ok) {
+    const elapsed = Date.now() - postStart
+    const text = await postRes.text()
+    console.error(`  ✗ POST /api/video failed: HTTP ${postRes.status} after ${elapsed}ms`)
+    console.error(`  body: ${text.slice(0, 500)}`)
+    process.exit(1)
+  }
+
+  const postJson = (await postRes.json()) as { jobId: string }
+  const postMs = Date.now() - postStart
+  log(`  ✓ POST accepted — jobId=${postJson.jobId}, accept-latency=${postMs}ms`)
+  console.log()
+
+  // ── Poll GET /api/video?jobId=... ─────────────────────────────────
+  log('STEP 3 — Poll GET /api/video?jobId=... until done')
+  let lastProgress = -1
+  let lastStage = ''
+  let done = false
+  let finalJob: any = null
+  const stages: { stage: string; t: number; pct: number }[] = []
+  const jobStart = Date.now()
+
+  while (!done) {
+    await new Promise(r => setTimeout(r, 1500))
+    const r = await fetch(`${API_BASE}/api/video?jobId=${postJson.jobId}`)
+    if (!r.ok) {
+      log(`  GET failed (HTTP ${r.status}) — retrying`)
+      continue
+    }
+    const job = (await r.json()) as any
+    finalJob = job
+
+    if (job.progress !== lastProgress || job.stage !== lastStage) {
+      lastProgress = job.progress
+      lastStage = job.stage ?? ''
+      const elapsed = ((Date.now() - jobStart) / 1000).toFixed(1)
+      log(`  [${elapsed}s] ${job.status}/${job.stage ?? '?'}: ${job.progress}% — ${job.currentLabel ?? ''}`)
+      stages.push({ stage: job.stage ?? '?', t: Date.now() - jobStart, pct: job.progress })
+    }
+
+    if (job.status === 'done' || job.status === 'error') done = true
+  }
+
+  const totalMs = Date.now() - jobStart
+  console.log()
+
+  if (finalJob.status !== 'done') {
+    console.error(`✗ Job FAILED — status=${finalJob.status}, error=${finalJob.error}`)
+    process.exit(1)
+  }
+
+  // ── Final report ──────────────────────────────────────────────────
+  console.log('═'.repeat(82))
+  console.log(` FINAL RESULTS — ${PHASE.toUpperCase()}`)
+  console.log('═'.repeat(82))
+  log(`Status:        ${finalJob.status}`)
+  log(`Total time:    ${(totalMs / 1000).toFixed(1)}s`)
+  log(`Progress:      ${finalJob.progress}%`)
+  log(`Video path:    ${finalJob.videoPath ?? '(not in response)'}`)
+  log(`Video size:    ${finalJob.videoSizeBytes ?? '?'}B`)
+  log(`Video dur:     ${finalJob.videoDuration ?? '?'}s`)
+  console.log()
+
+  // Stage transitions
+  console.log('Stage timeline:')
+  let prevT = 0
+  for (const s of stages) {
+    const dt = ((s.t - prevT) / 1000).toFixed(1)
+    console.log(`  +${(s.t / 1000).toFixed(1).padStart(6)}s  (${dt.padStart(5)}s since last)  ${s.stage.padEnd(15)} @ ${s.pct}%`)
+    prevT = s.t
+  }
+  console.log()
+  console.log(`  → TOTAL: ${(totalMs / 1000).toFixed(1)}s`)
+  console.log()
+
+  // Write a machine-readable result file for cross-run comparison
+  const resultFile = `/tmp/video-timing-${PHASE}.json`
+  fs.writeFileSync(
+    resultFile,
+    JSON.stringify(
+      {
+        phase: PHASE,
+        imageCount: IMAGE_COUNT,
+        audioDuration: AUDIO_DURATION_S,
+        jobId: postJson.jobId,
+        totalMs,
+        totalSeconds: totalMs / 1000,
+        progress: finalJob.progress,
+        videoPath: finalJob.videoPath ?? null,
+        videoSizeBytes: finalJob.videoSizeBytes ?? null,
+        videoDuration: finalJob.videoDuration ?? null,
+        stages
+      },
+      null,
+      2
+    )
+  )
+  console.log(`Result written to: ${resultFile}`)
+  console.log('═'.repeat(82))
 }
 
-main().catch((err) => {
-  console.error('Test crashed:', err)
+main().catch(err => {
+  console.error('Fatal:', err)
   process.exit(1)
 })

@@ -1,23 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
 import { randomUUID } from 'crypto'
+import {
+  callLLM,
+  friendlyLLMError,
+  DailyQuotaExhaustedError
+} from '@/lib/llm-wrapper'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MIN_CHARS = 50
 const MAX_CHARS = 20000
 
-/** Target size of each section sent to the LLM separately. */
-const SECTION_TARGET_CHARS = 900
+/** Target size of each section sent to the LLM separately (larger = fewer API calls). */
+const SECTION_TARGET_CHARS = 1400
 
 /** Section overlap above this triggers one aggressive re-rewrite attempt. */
 const SECTION_OVERLAP_LIMIT = 32
 
-/** How many sections the LLM rewrites concurrently (2 is the API-safe max). */
-const CONCURRENCY = 2
+/**
+ * How many sections the LLM rewrites concurrently.
+ * 1 = strictly sequential — the safest choice to stay under upstream rate limits.
+ */
+const CONCURRENCY = 1
 
 /** Finished jobs are kept for this long, then garbage-collected. */
-const JOB_TTL_MS = 10 * 60 * 1000
+//
+// 30 minutes — bumped from 10min to fit the smart retry-queue's worst case.
+// The retry-queue can wait up to ~8min per LLM call (6 rounds × 2min cap) when
+// all 3 tiers (Z.ai + Cloudflare + Groq) are simultaneously overloaded. For a
+// script with 2-3 sections, that's 16-24min in the pathological worst case —
+// 30min TTL gives a comfortable headroom while still reclaiming memory for
+// abandoned jobs. In practice the queue rarely runs more than 1-2 rounds.
+const JOB_TTL_MS = 30 * 60 * 1000
 
 const SYSTEM_PROMPT = `You are an expert script doctor who rewrites video transcripts into completely fresh, original scripts.
 
@@ -60,12 +74,30 @@ interface RewriteJobResult {
 
 interface RewriteJob {
   id: string
-  status: 'processing' | 'done' | 'error'
+  status: 'processing' | 'waiting' | 'done' | 'error'
   createdAt: number
   totalSections: number
   completedSections: number
   result?: RewriteJobResult
   error?: string
+  // ── Retry-queue waiting state ──
+  // When the LLM wrapper enters its smart retry-queue (all 3 tiers — Z.ai,
+  // Cloudflare, Groq — momentarily overloaded), it fires onWait. We persist
+  // the latest wait info here so the polling GET handler can surface
+  // "Waiting for AI capacity, retrying in Xs..." to the UI INSTEAD of an
+  // error. The job stays in 'waiting' status until either the queue produces
+  // a successful result (→ 'done') or the queue is exhausted (→ 'error').
+  waiting?: {
+    round: number
+    maxRounds: number
+    retryInSecs: number
+    // Epoch-ms when the current wait started — used by the UI to render a
+    // live countdown without polling the server every second.
+    startedAt: number
+    // Epoch-ms when the current wait will end (startedAt + retryInSecs*1000).
+    endsAt: number
+    lastError: string
+  }
 }
 
 const jobs = new Map<string, RewriteJob>()
@@ -182,52 +214,105 @@ function splitIntoSections(text: string, target = SECTION_TARGET_CHARS): string[
   return sections.filter((s) => s.length > 0)
 }
 
-type ZaiClient = Awaited<ReturnType<typeof ZAI.create>>
+// ─── LLM call (shared wrapper: Z.ai → Cloudflare → Groq + retry-queue) ──────
+//
+// The wrapper lives at src/lib/llm-wrapper.ts. It tries Z.ai first (direct
+// fetch + rate-limit header parsing — DailyQuotaExhaustedError aborts the
+// Z.ai path immediately and triggers the Cloudflare fallback). When Z.ai's
+// bundled daily quota is exhausted (the condition that broke Script Rewrite
+// for the user), the wrapper falls through to:
+//   TIER 2: Cloudflare Workers AI (@cf/meta/llama-3.3-70b-instruct-fp8-fast
+//           — 70B params, fp8 quantized, 24k context, genuinely free 10k
+//           neurons/day, no card)
+//   TIER 3: Groq (OpenAI-compatible, llama-3.3-70b-versatile default,
+//           14,400 req/day free, no card, independent infra)
+// And if ALL 3 tiers fail in a single pass, the wrapper enters a smart
+// retry-queue (exponential backoff 15s → 30s → 60s → 2min × 3, max 6 rounds
+// ≈ 8min total) that re-runs the whole chain. The `onWait` callback below
+// persists the wait info onto the job so the polling GET handler can surface
+// "Waiting for AI capacity, retrying in Xs..." to the UI INSTEAD of an error
+// — the user NEVER sees "very busy" anymore, only a live waiting countdown.
 
-/** One LLM call with 429-aware retries. */
+/**
+ * One LLM call to rewrite a single section. Returns the cleaned text.
+ *
+ * The `job` parameter is required: the function persists retry-queue wait
+ * state onto it (job.status='waiting' + job.waiting={...}) so the polling
+ * GET handler can render the live countdown in the UI. When the LLM call
+ * completes (success or final failure), the caller restores job.status to
+ * 'processing' so the UI flips back to the regular progress bar.
+ *
+ * On Z.ai quota exhaustion or persistent 429, transparently falls back to
+ * Cloudflare → Groq → retry-queue — the caller never needs to know which
+ * provider answered (or that the queue ran at all).
+ */
 async function callRewriteLLM(
-  zai: ZaiClient,
   section: string,
-  aggressive: boolean
+  aggressive: boolean,
+  job: RewriteJob
 ): Promise<string> {
   const userContent = aggressive
     ? `Rewrite the following section into an original script.\n${RETRY_PROMPT_SUFFIX}\n\n---SECTION START---\n${section}\n---SECTION END---`
     : `Rewrite the following section of a video transcript into an original script. Remember: same meaning, completely different wording and terminology, natural spoken narration.\n\n---SECTION START---\n${section}\n---SECTION END---`
 
-  const MAX_ATTEMPTS = 4
-  let lastErr: Error | null = null
-
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      const completion = await zai.chat.completions.create({
-        messages: [
-          { role: 'assistant', content: SYSTEM_PROMPT },
-          { role: 'user', content: userContent }
-        ],
-        thinking: { type: 'disabled' }
-      })
-
-      const raw = completion.choices[0]?.message?.content
-      if (!raw || !raw.trim()) {
-        throw new Error('The AI returned an empty response.')
-      }
-
-      const cleaned = cleanRewrittenText(raw)
-      if (countWords(cleaned) < 3) {
-        throw new Error('The AI response could not be parsed.')
-      }
-      return cleaned
-    } catch (err) {
-      lastErr = err instanceof Error ? err : new Error(String(err))
-      const rateLimited = lastErr.message.includes('429') || /too many requests/i.test(lastErr.message)
-      console.error(`[rewrite] LLM attempt ${attempt} failed${rateLimited ? ' (rate limit)' : ''}:`, lastErr.message)
-      if (attempt < MAX_ATTEMPTS) {
-        await new Promise((r) => setTimeout(r, rateLimited ? 3500 * attempt : 1200 * attempt))
+  const result = await callLLM(
+    { systemPrompt: SYSTEM_PROMPT, userContent },
+    {
+      tag: aggressive ? 'rewrite-aggressive' : 'rewrite',
+      zaiMaxAttempts: 3,
+      cloudflareMaxAttempts: 3,
+      groqMaxAttempts: 2,
+      maxTokens: 1800, // Llama 3.3 70B output cap — generous for a ~1400-char section rewrite.
+      temperature: 0.7,
+      // Persist every retry-queue entry onto the job so the polling UI can
+      // render a live countdown. The callback fires BEFORE the queue sleeps,
+      // so by the time the next GET poll arrives (1.5s later) the job is
+      // already in 'waiting' status with the wait ETA populated.
+      onWait: (info) => {
+        const now = Date.now()
+        job.status = 'waiting'
+        job.waiting = {
+          round: info.round,
+          maxRounds: info.maxRounds,
+          retryInSecs: info.retryInSecs,
+          startedAt: now,
+          endsAt: now + info.waitMs,
+          lastError: info.lastError
+        }
+        console.log(
+          `[rewrite] Job ${job.id} entered retry-queue (round ${info.round}/${info.maxRounds}); waiting ${info.retryInSecs}s. Last error: ${info.lastError}`
+        )
       }
     }
+  )
+
+  // LLM call returned — clear the waiting state + restore processing status
+  // so the UI flips back to the regular progress bar.
+  if (job.status === 'waiting') {
+    job.status = 'processing'
+    job.waiting = undefined
   }
 
-  throw lastErr ?? new Error('LLM call failed')
+  if (result.fellBackToCloudflare) {
+    console.log(
+      `[rewrite] Section used Cloudflare fallback (model=${result.model}, zaiAttempts=${result.zaiAttempts}, cfAttempts=${result.cloudflareAttempts}).`
+    )
+  } else if (result.fellBackToGroq) {
+    console.log(
+      `[rewrite] Section used Groq fallback (model=${result.model}, zaiAttempts=${result.zaiAttempts}, cfAttempts=${result.cloudflareAttempts}, groqAttempts=${result.groqAttempts}).`
+    )
+  }
+  if (result.usedRetryQueue) {
+    console.log(
+      `[rewrite] Section succeeded after retry-queue (rounds=${result.retryQueueRounds}, provider=${result.provider}).`
+    )
+  }
+
+  const cleaned = cleanRewrittenText(result.text)
+  if (countWords(cleaned) < 3) {
+    throw new Error('The AI response could not be parsed.')
+  }
+  return cleaned
 }
 
 /**
@@ -235,15 +320,15 @@ async function callRewriteLLM(
  * overlap quality gate fails. Raises on unrecoverable errors.
  */
 async function rewriteSectionWithQualityGate(
-  zai: ZaiClient,
-  section: string
+  section: string,
+  job: RewriteJob
 ): Promise<string> {
-  let result = await callRewriteLLM(zai, section, false)
+  let result = await callRewriteLLM(section, false, job)
 
   const overlap = vocabularyOverlap(section, result)
   if (overlap > SECTION_OVERLAP_LIMIT) {
     try {
-      const aggressiveResult = await callRewriteLLM(zai, section, true)
+      const aggressiveResult = await callRewriteLLM(section, true, job)
       const aggressiveOverlap = vocabularyOverlap(section, aggressiveResult)
       if (
         aggressiveOverlap < overlap &&
@@ -265,7 +350,6 @@ async function rewriteSectionWithQualityGate(
  */
 async function processJob(job: RewriteJob, transcript: string, sections: string[]) {
   try {
-    const zai = await ZAI.create()
     const results: string[] = new Array(sections.length)
     let nextIndex = 0
 
@@ -275,7 +359,7 @@ async function processJob(job: RewriteJob, transcript: string, sections: string[
         if (i >= sections.length) return
         nextIndex++
 
-        results[i] = await rewriteSectionWithQualityGate(zai, sections[i])
+        results[i] = await rewriteSectionWithQualityGate(sections[i], job)
         job.completedSections++
       }
     }
@@ -299,11 +383,11 @@ async function processJob(job: RewriteJob, transcript: string, sections: string[
     )
   } catch (error) {
     job.status = 'error'
-    job.error =
-      error instanceof Error && error.message
-        ? error.message
-        : 'The AI rewrite service failed.'
-    console.error(`[rewrite] Job ${job.id} failed:`, job.error)
+    // Clear any lingering wait state — the job is now in terminal 'error' status.
+    job.waiting = undefined
+    // Always store a calm, user-facing sentence (never raw 429 JSON).
+    job.error = friendlyLLMError(error)
+    console.error(`[rewrite] Job ${job.id} failed:`, error instanceof Error ? error.message : error)
   }
 }
 
@@ -378,11 +462,10 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('[rewrite] Unexpected error:', error)
-    const rawMessage = error instanceof Error && error.message ? error.message : String(error)
     return NextResponse.json(
       {
         success: false,
-        error: `The AI rewrite service failed to start. Please try again. (Details: ${rawMessage.slice(0, 180)})`
+        error: friendlyLLMError(error)
       },
       { status: 502 }
     )
@@ -407,7 +490,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Rewrite job not found. It may have expired (jobs are kept for 10 minutes) — please start again.'
+        error: 'Rewrite job not found. It may have expired (jobs are kept for 30 minutes) — please start again.'
       },
       { status: 404 }
     )
@@ -424,12 +507,46 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  if (job.status === 'waiting') {
+    // The LLM wrapper entered its smart retry-queue (all 3 tiers — Z.ai,
+    // Cloudflare, Groq — momentarily overloaded). The job is NOT failed —
+    // it's waiting for any tier to recover. Surface a clear "waiting"
+    // status with a live countdown ETA so the UI can render
+    // "Waiting for AI capacity, retrying in Xs..." instead of an error.
+    //
+    // We pass both `retryInSecs` (the original wait) and `endsAt` (epoch-ms
+    // when the wait elapses) so the UI can compute a precise live countdown
+    // without polling the server every second.
+    const w = job.waiting
+    const now = Date.now()
+    const remainingSecs = w ? Math.max(0, Math.round((w.endsAt - now) / 1000)) : 0
+    return NextResponse.json({
+      success: true,
+      data: {
+        status: 'waiting',
+        completedSections: job.completedSections,
+        totalSections: job.totalSections,
+        waiting: w
+          ? {
+              round: w.round,
+              maxRounds: w.maxRounds,
+              retryInSecs: w.retryInSecs,
+              retryInSecsRemaining: remainingSecs,
+              startedAt: w.startedAt,
+              endsAt: w.endsAt,
+              lastError: w.lastError
+            }
+          : null
+      }
+    })
+  }
+
   if (job.status === 'error') {
-    // Job consumed — clean it up
+    // Job consumed — clean it up. job.error is already a friendly sentence.
     jobs.delete(job.id)
     return NextResponse.json({
       success: false,
-      error: `The AI rewrite service failed. Please try again. (Details: ${job.error.slice(0, 180)})`
+      error: job.error
     })
   }
 

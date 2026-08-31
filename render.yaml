@@ -1,0 +1,136 @@
+# Render Blueprint for autotube-studio
+# Docs: https://render.com/docs/blueprint-spec
+#
+# ─── DEPLOYMENT SUMMARY ────────────────────────────────────────────────────
+#   • One Next.js Web Service (Node.js native runtime)
+#   • FFmpeg installed during the build phase via apt-get (Ubuntu-based image)
+#   • SQLite database file on a 10 GB persistent Disk (no separate DB service)
+#   • All secrets (API keys) declared as `sync: false` — set values in the
+#     Render dashboard → Environment tab. YAML never stores secret values.
+#
+# ─── BEFORE YOU CLICK "APPLY" ON RENDER ────────────────────────────────────
+#   Required secret env vars (paste values in dashboard → Environment):
+#     • GOOGLE_API_KEY         — https://aistudio.google.com/apikey
+#     • CLOUDFLARE_ACCOUNT_ID  — Cloudflare dashboard (right sidebar)
+#     • CLOUDFLARE_API_TOKEN   — https://dash.cloudflare.com/profile/api-tokens
+#     • PEXELS_API_KEY         — https://www.pexels.com/api/
+#     • UNSPLASH_ACCESS_KEY    — https://unsplash.com/developers
+#     • NEXTAUTH_SECRET         — generate locally: `openssl rand -base64 32`
+#   DATABASE_URL is hard-set below to a file path on the persistent disk
+#   (file:/data/autotube.db) — do NOT override it in the dashboard.
+#
+# ─── RENDER-SPECIFIC NOTES (read before deploying) ────────────────────────
+#   1. FFmpeg: Render's Node runtime is Ubuntu. `apt-get install -y ffmpeg`
+#      works during the build phase (runs as root inside the build container).
+#      Verified pattern in Render community — no extra Docker needed.
+#   2. Bun: Render does not pre-install bun. The buildCommand installs it from
+#      bun.sh (needed because the lockfile is bun.lock). Runtime uses plain
+#      `node` (see startCommand) — no bun dependency at runtime.
+#   3. Filesystem: Render's local filesystem is EPHEMERAL — /tmp is wiped on
+#      every redeploy/restart. A 10 GB persistent Disk is mounted at /data.
+#      Three env vars (AUTOTUBE_IMAGE_DIR / AUTOTUBE_VIDEO_DIR /
+#      AUTOTUBE_MUSIC_DIR) point the app at /data/autotube-* so generated
+#      media survives redeploys. The SQLite DB file lives at /data/autotube.db
+#      for the same reason.
+#   4. In-memory job store: image/video jobs live in process memory. This is
+#      FINE for SINGLE-INSTANCE deployment (which is the default —
+#      `numInstances: 1` below). Do NOT scale to multiple instances without
+#      first migrating the job store to Postgres/Redis — a request to instance
+#      B cannot find a job started on instance A.
+#   5. Plan recommendation: video assembly is CPU-heavy. The Starter plan
+#      (0.1 CPU / 256 MB) WILL run out of memory and time out on a 44-image
+#      + 3-min-audio job. Use the Standard plan with at least 2 CPU + 2 GB
+#      RAM to match sandbox performance (~134 s for that job).
+#   6. Build duration: Next.js standalone build + apt-get ffmpeg + bun install
+#      takes ~5-8 min on first deploy, faster on subsequent (cached) builds.
+#   7. SQLite caveat: single-writer DB. Fine for single-instance web service.
+#      If you ever need background workers or multi-instance, migrate to
+#      Render's PostgreSQL service + change `provider = "postgresql"` in
+#      prisma/schema.prisma.
+
+services:
+  - type: web
+    name: autotube-studio
+    env: node
+    plan: standard
+    region: oregon
+    branch: main
+    repo: https://github.com/ashraf034194-sketch/autotube-studio.git
+    numInstances: 1
+    healthCheckPath: /
+    autoDeploy: true
+
+    buildCommand: |
+      # 1. Install ffmpeg (Ubuntu apt — runs as root during build)
+      apt-get update -qq && apt-get install -y --no-install-recommends ffmpeg
+      ffmpeg -version | head -1
+
+      # 2. Install bun (lockfile is bun.lock — needs bun to install deps)
+      curl -fsSL https://bun.sh/install | bash
+      export BUN_INSTALL="$HOME/.bun"
+      export PATH="$BUN_INSTALL/bin:$PATH"
+      bun --version
+
+      # 3. Install Node deps from lockfile
+      bun install --frozen-lockfile
+
+      # 4. Generate Prisma client
+      bun run db:generate
+
+      # 5. Build Next.js standalone
+      bun run build
+
+    preDeployCommand: |
+      export BUN_INSTALL="$HOME/.bun"
+      export PATH="$BUN_INSTALL/bin:$PATH"
+      # Push Prisma schema → creates tables in /data/autotube.db on first deploy.
+      # Idempotent — safe to run on every deploy.
+      bun run db:push
+
+    startCommand: node .next/standalone/server.js
+
+    # Persistent disk — survives redeploys. Holds the SQLite DB file and
+    # all generated media (images, videos, music uploads). Without this,
+    # everything dies on every restart.
+    disk:
+      name: autotube-data
+      mountDir: /data
+      sizeGB: 10
+
+    # ── Environment variables ──────────────────────────────────────────────
+    envVars:
+      # SQLite DB file on the persistent disk
+      - key: DATABASE_URL
+        value: file:/data/autotube.db
+
+      # Path overrides — point the app at the persistent disk
+      - key: AUTOTUBE_IMAGE_DIR
+        value: /data/autotube-images
+      - key: AUTOTUBE_VIDEO_DIR
+        value: /data/autotube-videos
+      - key: AUTOTUBE_MUSIC_DIR
+        value: /data/autotube-music
+
+      # Production env
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_APP_ENV
+        value: production
+
+      # Render uses PORT env var. Next.js standalone server.js honors it.
+      - key: PORT
+        value: 10000
+
+      # Secrets — paste actual values in Render dashboard → Environment tab
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_API_TOKEN
+        sync: false
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: UNSPLASH_ACCESS_KEY
+        sync: false
+      - key: NEXTAUTH_SECRET
+        sync: false
