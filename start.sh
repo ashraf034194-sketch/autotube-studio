@@ -17,18 +17,33 @@
 #             mounted at /data) → SQLite can't create the DB file.
 #     2. The server starts but binds to 127.0.0.1 (localhost) instead of
 #        0.0.0.0 → Railway's external proxy can't reach it.
+#     3. PORT MISMATCH: Railway's Settings → Networking expects the app on a
+#        specific port (e.g. 8080 — set automatically when the domain was
+#        generated). If the newer Railway UI does NOT inject PORT as an env
+#        var, this script's old fallback (3000) made the app listen on 3000
+#        while Railway's proxy routed to 8080 → 502.
 #
 #   This script fixes ALL of these:
 #     • Sets HOSTNAME=0.0.0.0 explicitly (the server MUST bind to all interfaces).
+#     • Falls back to PORT=8080 (NOT 3000) when PORT is unset — matches the
+#       port Railway's Networking section expects, so even if the newer UI
+#       doesn't inject PORT, the app listens on the right port.
 #     • Defaults DATABASE_URL to an ephemeral path if unset (so the app boots).
 #     • Creates the DB file's parent directory (so SQLite can write the file).
-#     • Logs a startup banner showing PORT, HOSTNAME, DATABASE_URL, runtimes.
+#     • Logs a startup banner showing PORT (+ source: env-var vs default-8080),
+#       HOSTNAME, DATABASE_URL, runtimes — so deploy logs make any mismatch
+#       diagnosable at a glance.
 #     • Uses `exec` so node becomes PID 1 (receives Railway's SIGTERM directly).
 #
 #   Next.js standalone server.js (auto-generated) reads:
-#       process.env.PORT     (Railway injects this — dynamic, NOT 3000)
+#       process.env.PORT     (Railway injects this — dynamic; our fallback 8080)
 #       process.env.HOSTNAME  (we set to 0.0.0.0 here)
 #   and binds to 0.0.0.0:$PORT. Confirmed in .next/standalone/server.js lines 8-9.
+#
+#   VERIFICATION: after deploy, check Railway → Deploy logs for the line
+#     [start] PORT=8080 (source: env-var)  HOSTNAME=0.0.0.0  ...
+#   If source shows 'default-8080', Railway isn't injecting PORT — set
+#   PORT=8080 manually in Railway → Variables tab to force it.
 #
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -36,11 +51,21 @@ set -euo pipefail
 echo "[start] ─────────── Railway boot ───────────"
 
 # ─── 1. PORT (Railway-injected, dynamic) ─────────────────────────────────────
-# Railway auto-injects PORT. If somehow unset, fall back to 3000 (container
-# internal). The standalone server.js honors process.env.PORT.
+# Railway auto-injects PORT — the value matches the "port" shown in the
+# service's Settings → Networking section (for this service: 8080). In the
+# newer Railway UI, PORT is sometimes NOT auto-injected (the domain's port is
+# configured but the env var isn't propagated). When that happens, falling back
+# to 3000 makes the app listen on 3000 while Railway's proxy routes to 8080 →
+# PORT MISMATCH → 502 "Application failed to respond".
+#
+# Fix: fall back to 8080 (NOT 3000) so the app listens on the port Railway's
+# proxy expects. Track the source (env-var vs default) so deploy logs make the
+# mismatch diagnosable at a glance.
+PORT_SOURCE="env-var"
 if [ -z "${PORT:-}" ]; then
-  echo "[start] WARNING: PORT env var not set — defaulting to 3000 (Railway should inject this)"
-  PORT=3000
+  echo "[start] WARNING: PORT env var not set — defaulting to 8080 (matches Railway Networking)"
+  PORT=8080
+  PORT_SOURCE="default-8080"
 fi
 export PORT
 
@@ -78,7 +103,12 @@ if [ ! -d "$DB_DIR" ]; then
 fi
 
 # ─── 5. Startup banner (shows up in Railway → Deploy logs) ────────────────────
-echo "[start] PORT=$PORT  HOSTNAME=$HOSTNAME  NODE_ENV=$NODE_ENV"
+# CRITICAL: verify PORT here matches the "port" shown in Railway Settings →
+# Networking (for this service: 8080). If they differ, Railway's reverse proxy
+# will 502. The "(source: …)" tag tells you whether PORT came from Railway's
+# injected env-var or our 8080 fallback — so you can tell at a glance if the
+# env-var injection is working.
+echo "[start] PORT=$PORT (source: $PORT_SOURCE)  HOSTNAME=$HOSTNAME  NODE_ENV=$NODE_ENV"
 echo "[start] DATABASE_URL=$DATABASE_URL"
 echo "[start] node=$(node -v 2>/dev/null || echo 'unknown')  bun=$(bun -v 2>/dev/null || echo 'unknown')"
 echo "[start] ffmpeg=$(ffmpeg -version 2>/dev/null | head -n1 || echo 'NOT FOUND')"
