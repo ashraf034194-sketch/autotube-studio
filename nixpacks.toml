@@ -1,0 +1,117 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Nixpacks build configuration for Railway.app
+# Docs: https://nixpacks.com/docs/configuration/file
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# What this file does
+# ───────────────────
+#   Nixpacks is Railway's open-source build system (similar to a Heroku
+#   buildpack but container-native). When Railway sees a `nixpacks.toml` at the
+#   repo root, it uses it to build the image instead of auto-detection.
+#
+#   This config:
+#     1. Installs Node + Bun runtimes (both available in the final image)
+#     2. Installs ffmpeg + DejaVu/Liberation fonts via apt (for video assembly
+#        + caption rendering)
+#     3. Runs `bun install --frozen-lockfile` (auto-detected from bun.lock)
+#     4. Generates Prisma client + builds Next.js standalone
+#     5. Starts the server with `bun run db:push && node .next/standalone/server.js`
+#        (pushes Prisma schema to the SQLite file on the persistent volume on
+#        every boot — idempotent, safe on a populated DB)
+#
+# Before you click "Deploy" on Railway
+# ─────────────────────────────────────
+#   Required secret env vars — set in Railway dashboard → Variables tab:
+#     • GOOGLE_API_KEY         — https://aistudio.google.com/apikey
+#     • CLOUDFLARE_ACCOUNT_ID  — Cloudflare dashboard right sidebar
+#     • CLOUDFLARE_API_TOKEN   — https://dash.cloudflare.com/profile/api-tokens
+#     • PEXELS_API_KEY         — https://www.pexels.com/api/
+#     • UNSPLASH_ACCESS_KEY    — https://unsplash.com/developers
+#     • NEXTAUTH_SECRET        — generate locally: `openssl rand -base64 32`
+#
+#   Auto-set env vars (set in dashboard Variables tab, NOT here — Nixpacks
+#   does not bake env vars into the image, they are runtime-only on Railway):
+#     • DATABASE_URL           — file:/data/autotube.db  (SQLite on volume)
+#     • AUTOTUBE_IMAGE_DIR     — /data/autotube-images
+#     • AUTOTUBE_VIDEO_DIR     — /data/autotube-videos
+#     • AUTOTUBE_MUSIC_DIR     — /data/autotube-music
+#     • NODE_ENV               — production
+#     • PORT                   — 8080  (Railway auto-injects PORT — do NOT set)
+#
+# Railway-specific notes (read before deploying)
+# ───────────────────────────────────────────────
+#   1. FFmpeg: Nixpacks's `[phases.setup].aptPkgs` installs ffmpeg from the
+#      Ubuntu apt repo during the BUILD phase. The binary is baked into the
+#      final image, so it's available at runtime too. Verified pattern in
+#      Railway community — no custom Dockerfile needed.
+#   2. Bun: Railway/Nixpacks does NOT pre-install bun. Declaring "bun" as a
+#      provider installs it from bun.sh into the image. We use bun at build
+#      time (lockfile-respecting install) and runtime (for `bun run db:push`
+#      before the server boots).
+#   3. Filesystem: Railway's container filesystem is EPHEMERAL — anything in
+#      /tmp is wiped on every redeploy/restart. To keep the SQLite DB file +
+#      generated media (images, videos, music uploads), you MUST create a
+#      Railway Volume mounted at `/data` (manual step in the dashboard —
+#      Railway does not yet support declarative volumes in config files).
+#      See deploy steps in the chat reply for the exact UI clicks.
+#   4. In-memory job store: image/video jobs live in process memory. This is
+#      FINE for SINGLE-REPLICA deployments (see railway.json `numReplicas: 1`).
+#      Do NOT scale to multiple replicas without first migrating the job store
+#      to Postgres/Redis — a request to replica B cannot find a job started on
+#      replica A.
+#   5. Resource recommendation: video assembly is CPU-heavy. Railway's
+#      "Trial" plan ($5 credit, ~5h usage) WILL run out before completing a
+#      44-image + 3-min-audio job (the job takes ~134 s of CPU on 2 cores, but
+#      also needs sustained RAM). Use the "Hobby" plan ($5/mo + usage) with
+#      at least 2 vCPU + 2 GB RAM allocated for production. The first deploy
+#      also takes ~5–8 min of build time.
+#   6. Volume + multi-replica caveat: Railway Volumes are bound to ONE
+#      replica. If you set `numReplicas > 1`, each replica gets its OWN
+#      volume at the same mount path — the SQLite file would diverge per
+#      replica, and in-flight jobs would die on whichever replica they
+#      started. KEEP `numReplicas = 1` (already set in railway.json).
+
+# ─── Build environment ───────────────────────────────────────────────────────
+
+[phases.setup]
+# Runtimes installed in the image. Node is the runtime (start cmd uses `node`).
+# Bun is needed for the lockfile-respecting install + the db:push step on boot.
+providers = ["node", "bun"]
+
+# System packages installed via apt during build. ffmpeg is required for the
+# video assembly pipeline (per-clip encode → xfade transitions → mux). The
+# font packages are required for caption rendering (otherwise ffmpeg's
+# drawtext filter fails with "cannot find default font").
+aptPkgs = [
+  "ffmpeg",
+  "fonts-dejavu-core",
+  "fonts-liberation",
+]
+
+# ─── Build commands (run during the BUILD phase, baked into the image) ────────
+# Nixpacks auto-detects `bun install --frozen-lockfile` from the presence of
+# bun.lock, so we don't need to specify [phases.install] explicitly.
+
+[phases.build]
+# Generate Prisma client (writes to node_modules/.prisma/client — needs to be
+# in the image before `next build`, since the Next.js build inlines Prisma).
+# Then build Next.js standalone (which our package.json `build` script does:
+# `next build && cp -r .next/static .next/standalone/.next/ && cp -r public
+# .next/standalone/`).
+cmds = [
+  "bun run db:generate",
+  "bun run build",
+]
+
+# ─── Start command (runs on every boot of the container) ─────────────────────
+# Two steps chained with `&&`:
+#   1. `bun run db:push` — pushes the Prisma schema to DATABASE_URL. On a
+#      fresh volume, this creates the SQLite file + tables. On a populated
+#      volume, it's idempotent (schema matches → no-op). The
+#      `--accept-data-loss` flag is in our package.json's db:push script.
+#   2. `node .next/standalone/server.js` — starts the standalone Next.js
+#      server (no bun runtime dep for serving requests, just Node). Railway
+#      injects `PORT` env var automatically; the standalone server honors it.
+
+[start]
+cmd = "bun run db:push && node .next/standalone/server.js"
