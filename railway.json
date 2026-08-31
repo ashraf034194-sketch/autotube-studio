@@ -3,7 +3,7 @@
   "build": {
     "builder": "NIXPACKS",
     "buildCommand": null,
-    "watchPatterns": ["src/**/*", "public/**/*", "prisma/**/*", "package.json", "nixpacks.toml"]
+    "watchPatterns": ["src/**/*", "public/**/*", "prisma/**/*", "package.json", "nixpacks.toml", "start.sh"]
   },
   "deploy": {
     "startCommand": "bash start.sh",
