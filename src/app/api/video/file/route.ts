@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-/** Root directory under which assembled video files are stored. */
-const VIDEO_ROOT = process.env.AUTOTUBE_VIDEO_DIR || '/tmp/autotube-videos'
+import { getVideoOutputPath, VIDEO_DIR_ROOT } from '@/lib/video-assembly'
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
@@ -25,17 +21,22 @@ const VIDEO_ROOT = process.env.AUTOTUBE_VIDEO_DIR || '/tmp/autotube-videos'
 export async function GET(req: NextRequest) {
   const jobId = req.nextUrl.searchParams.get('jobId')
 
-  if (!jobId || !/^[a-f0-9-]{1,64}$/i.test(jobId)) {
+  // Accepts the real video job-id format (vid-<timestamp>-<rand>). No slashes,
+  // dots or separators beyond dash/underscore — combined with the resolve()
+  // check below, path traversal stays impossible.
+  if (!jobId || !/^[a-zA-Z0-9_-]{1,64}$/.test(jobId)) {
     return NextResponse.json(
       { success: false, error: 'Invalid or missing jobId.' },
       { status: 400 }
     )
   }
 
-  const filePath = path.join(VIDEO_ROOT, jobId, 'final.mp4')
+  // Single source of truth: the same path builder the assembly + download
+  // routes use (…/<jobId>/output.mp4).
+  const filePath = getVideoOutputPath(jobId)
 
   // Defense in depth against path traversal.
-  const resolvedRoot = path.resolve(VIDEO_ROOT)
+  const resolvedRoot = path.resolve(VIDEO_DIR_ROOT)
   const resolvedFile = path.resolve(filePath)
   if (!resolvedFile.startsWith(resolvedRoot + path.sep)) {
     return NextResponse.json(

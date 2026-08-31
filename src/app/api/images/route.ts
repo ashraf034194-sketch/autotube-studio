@@ -189,13 +189,22 @@ Output ONLY the Style DNA paragraph itself — no preamble, no markdown, no labe
 const DEFAULT_STYLE_DNA =
   'cinematic photorealistic 16:9, warm golden-hour palette with amber and teal tones, soft directional lighting with gentle bokeh background, eye-level medium shots, intimate contemplative mood, no text overlay, no watermark'
 
-async function generateStyleDna(script: string): Promise<string> {
+async function generateStyleDna(script: string, visualDirection?: string): Promise<string> {
   // Use up to 8KB of the script — enough to capture the subject + tone without
   // blowing the input token budget.
   const scriptSlice = script.slice(0, 8000)
+  // Flow Prompt Studio integration: when the caller (autopilot or any client)
+  // passes a visual direction (style / lighting / composition selected from
+  // the Flow Studio catalogs), it becomes a HARD constraint the Style DNA
+  // must honor — the LLM may enrich it with palette/camera/mood derived from
+  // the script, but never contradict or drop the user's chosen direction.
+  const directionBlock =
+    visualDirection && visualDirection.trim()
+      ? `\n\nUSER'S VISUAL DIRECTION (MUST be honored verbatim — weave every element into the Style DNA): ${visualDirection.trim()}\nYou may ADD palette, camera and mood details derived from the script, but you must NEVER contradict, drop, or dilute the user's visual direction.`
+      : ''
   const result = await callLLMWrapper(
     {
-      systemPrompt: STYLE_DNA_SYSTEM,
+      systemPrompt: STYLE_DNA_SYSTEM + directionBlock,
       userContent: `SCRIPT:\n${scriptSlice}\n\nDerive the Style DNA for this video:`
     },
     {
@@ -223,6 +232,11 @@ async function generateStyleDna(script: string): Promise<string> {
     console.log(
       `[images] Style DNA succeeded after retry-queue (rounds=${result.retryQueueRounds}, provider=${result.provider}).`
     )
+  }
+  if (!result.text.trim()) {
+    return visualDirection?.trim()
+      ? `${DEFAULT_STYLE_DNA}, ${visualDirection.trim()}`
+      : DEFAULT_STYLE_DNA
   }
   return result.text.trim().slice(0, 1000) // Cap at 1000 chars to keep prompt sizes manageable.
 }
@@ -405,6 +419,9 @@ export async function POST(req: NextRequest) {
     durationSeconds?: number
     prompts?: string[]
     chunks?: ImageChunk[] // PREFERRED path (exact script-image match)
+    /** Flow Prompt Studio visual direction (style / lighting / composition)
+     *  steering the Style DNA + every image prompt of the batch. */
+    visualDirection?: string
   }
   try {
     body = await req.json()
@@ -443,6 +460,8 @@ export async function POST(req: NextRequest) {
   // No LLM-based segmentation needed; the chunks ARE the segmentation.
   if (Array.isArray(body.chunks) && body.chunks.length > 0 && body.chunks[0]?.text) {
     const chunks = body.chunks.slice(0, MAX_IMAGES)
+    const visualDirection =
+      typeof body.visualDirection === 'string' ? body.visualDirection.slice(0, 500) : undefined
     const targetCount = chunks.length
     const jobId = `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const job: ImageJob = {
@@ -459,13 +478,13 @@ export async function POST(req: NextRequest) {
       currentLabel: 'Designing visual style for the video'
     }
     jobs.set(jobId, job)
-    processJob(job, { chunks }).catch((err) => {
+    processJob(job, { chunks, visualDirection }).catch((err) => {
       job.status = 'error'
       job.error = err instanceof Error ? err.message : String(err)
       console.error(`[images] Job ${jobId} crashed:`, job.error)
     })
     console.log(
-      `[images] Job ${jobId} started (chunk-based): ${targetCount} chunks, prompt-gen runs in background`
+      `[images] Job ${jobId} started (chunk-based): ${targetCount} chunks, prompt-gen runs in background${visualDirection ? `, visualDirection="${visualDirection.slice(0, 80)}"` : ''}`
     )
     return NextResponse.json({ jobId, total: targetCount, prompts: [], chunks })
   }
@@ -500,7 +519,11 @@ export async function POST(req: NextRequest) {
     currentLabel: 'Designing visual style for the video'
   }
   jobs.set(jobId, job)
-  processJob(job, { chunks: job.chunks }).catch((err) => {
+  processJob(job, {
+    chunks: job.chunks,
+    visualDirection:
+      typeof body.visualDirection === 'string' ? body.visualDirection.slice(0, 500) : undefined
+  }).catch((err) => {
     job.status = 'error'
     job.error = err instanceof Error ? err.message : String(err)
     console.error(`[images] Job ${jobId} crashed:`, job.error)
@@ -576,7 +599,7 @@ export async function GET(req: NextRequest) {
 
 async function processJob(
   job: ImageJob,
-  promptRequest?: { chunks: ImageChunk[] }
+  promptRequest?: { chunks: ImageChunk[]; visualDirection?: string }
 ): Promise<void> {
   fs.mkdirSync(path.join(IMAGE_DIR_ROOT, job.id), { recursive: true })
 
@@ -585,7 +608,7 @@ async function processJob(
     try {
       job.currentLabel = 'Designing visual style for the video'
       const scriptForStyle = promptRequest.chunks.map((c) => c.text).join(' ')
-      job.styleDna = await generateStyleDna(scriptForStyle)
+      job.styleDna = await generateStyleDna(scriptForStyle, promptRequest.visualDirection)
       const totalBatches = Math.ceil(promptRequest.chunks.length / PROMPT_BATCH_SIZE)
       job.promptBatchesTotal = totalBatches
       job.promptBatchesDone = 0
@@ -600,7 +623,11 @@ async function processJob(
       console.warn(
         `[images] Job ${job.id} Style DNA failed — using default: ${msg.slice(0, 100)}`
       )
-      job.styleDna = DEFAULT_STYLE_DNA
+      // Keep honoring the Flow Studio visual direction even on the
+      // fail-soft default path.
+      job.styleDna = promptRequest.visualDirection?.trim()
+        ? `${DEFAULT_STYLE_DNA}, ${promptRequest.visualDirection.trim()}`
+        : DEFAULT_STYLE_DNA
       const totalBatches = Math.ceil(promptRequest.chunks.length / PROMPT_BATCH_SIZE)
       job.promptBatchesTotal = totalBatches
       job.promptBatchesDone = 0

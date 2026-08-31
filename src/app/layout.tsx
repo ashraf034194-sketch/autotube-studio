@@ -14,25 +14,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flow Prompt Studio — Google Flow Image Generation Console",
+  title: "AutoTube Studio · Autopilot — Script to Finished Video",
   description:
-    "Structure, validate and orchestrate image-generation prompts for Google Flow. Intelligent prompt analysis with strict fidelity — no API keys, no separate credits.",
+    "Paste a script and the autopilot agent does everything else: rewrite, voiceover, Flow-Studio image prompts, batch image generation and full video editing — zero API keys.",
   keywords: [
-    "Google Flow",
-    "prompt engineering",
-    "image generation",
-    "prompt structuring",
-    "AI filmmaking",
-    "Flow prompt studio"
+    "video automation",
+    "faceless video",
+    "YouTube automation",
+    "AI video editor",
+    "text to video",
+    "autotube"
   ],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "Flow Prompt Studio — Google Flow Image Generation Console",
+    title: "AutoTube Studio · Autopilot — Script to Finished Video",
     description:
-      "Intelligent prompt analysis + structuring for Google Flow image generation. Zero API keys, compliant by design.",
-    siteName: "Flow Prompt Studio",
+      "One script in, one finished MP4 out. Fully automated pipeline: rewrite → voiceover → Flow-Studio prompts → images → video.",
+    siteName: "AutoTube Studio",
     type: "website",
   },
 };
