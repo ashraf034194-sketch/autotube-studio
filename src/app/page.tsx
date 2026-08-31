@@ -400,7 +400,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.1 }}
             >
-              <Card className="border-zinc-800/60 bg-zinc-900/40 backdrop-blur-sm">
+              <Card className="border-zinc-800/60 bg-zinc-900/40 text-zinc-100 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -443,7 +443,7 @@ export default function Home() {
                     placeholder="Paste your video script or transcript here… (or click “Load sample” to try it instantly)"
                     aria-label="Video script input"
                     disabled={busy}
-                    className="min-h-[220px] resize-y border-zinc-800 bg-zinc-950/70 text-sm leading-relaxed placeholder:text-zinc-600 focus-visible:ring-amber-500/60 sm:min-h-[260px]"
+                    className="min-h-[220px] resize-y border-zinc-800 bg-zinc-950/70 text-zinc-100 caret-amber-400 text-sm leading-relaxed placeholder:text-zinc-600 focus-visible:ring-amber-500/60 sm:min-h-[260px]"
                   />
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500">
                     <span className="inline-flex items-center gap-1.5">
@@ -473,7 +473,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.15 }}
             >
-              <Card className="border-zinc-800/60 bg-zinc-900/40 backdrop-blur-sm">
+              <Card className="border-zinc-800/60 bg-zinc-900/40 text-zinc-100 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Settings2 className="h-4 w-4 text-zinc-400" aria-hidden="true" />
@@ -559,7 +559,7 @@ export default function Home() {
                             value={settings.customStyle}
                             onChange={(e) => update('customStyle', e.target.value)}
                             placeholder="e.g. dark moody documentary, muted colors"
-                            className="h-10 border-zinc-800 bg-zinc-950/70"
+                            className="h-10 border-zinc-800 bg-zinc-950/70 text-zinc-100"
                           />
                         </div>
                       ) : (
@@ -607,7 +607,7 @@ export default function Home() {
                             value={settings.customComposition}
                             onChange={(e) => update('customComposition', e.target.value)}
                             placeholder="e.g. over-the-shoulder shots, centered hero framing"
-                            className="h-10 border-zinc-800 bg-zinc-950/70"
+                            className="h-10 border-zinc-800 bg-zinc-950/70 text-zinc-100"
                           />
                         </div>
                       ) : (
@@ -702,7 +702,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.2 }}
             >
-              <Card className="border-amber-500/25 bg-gradient-to-b from-amber-500/10 to-zinc-900/40 backdrop-blur-sm">
+              <Card className="border-amber-500/25 bg-gradient-to-b from-amber-500/10 to-zinc-900/40 text-zinc-100 backdrop-blur-sm">
                 <CardContent className="space-y-3 p-4 sm:p-6">
                   {startError && (
                     <Alert variant="destructive" role="alert">
@@ -753,7 +753,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.12 }}
             >
-              <Card className="border-zinc-800/60 bg-zinc-900/40 backdrop-blur-sm">
+              <Card className="border-zinc-800/60 bg-zinc-900/40 text-zinc-100 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="flex items-center gap-2 text-base">

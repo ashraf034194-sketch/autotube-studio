@@ -290,6 +290,42 @@ async function fetchJson<T>(
   }
 }
 
+// ─── CDN-level crop-to-fill (Issue 2 fix, 2026-06) ───────────────────────────
+
+/** PRODUCTION FIX (Issue 2): request the photo PRE-CROPPED to 16:9 at full HD
+ * straight from the stock CDN, instead of downloading whatever aspect ratio
+ * the search returned and letterboxing/blur-upscaling it locally.
+ *
+ * BOTH Pexels (images.pexels.com) and Unsplash (images.unsplash.com) serve
+ * their photos through imgix-compatible CDNs that officially support
+ * `w`, `h`, `fit=crop`, `q`, and format params on the image URL:
+ *   → https://…/photo.jpg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop
+ * delivers an EXACT 1920×1080 center-crop ("object-fit: cover", server-side).
+ *
+ * Why this matters:
+ *  - Unsplash's `urls.regular` is capped at 1080px wide → we upscaled it
+ *    1.78× to 1920 → the reported BLUR. raw+w=1920 delivers native 1920 wide.
+ *  - Pexels `large2x` is 1880×1255 (≈3:2) → the reported PILLARBOX bars.
+ *    fit=crop removes the need for any local letterboxing.
+ * The FFmpeg cover-crop (video-assembly.ts) stays as defense-in-depth for any
+ * provider that ignores the params — belt AND suspenders.
+ */
+const STOCK_CDN_CROP = {
+  w: 1920,
+  h: 1080
+}
+
+/** Append imgix-style crop params to a stock photo URL (safe with existing
+ * query strings; de-duplicates the separator). */
+function withCropParams(url: string, extra?: string): string {
+  if (!url) return url
+  const sep = url.includes('?') ? '&' : '?'
+  const base =
+    `${sep}auto=compress&cs=tinysrgb` +
+    `&w=${STOCK_CDN_CROP.w}&h=${STOCK_CDN_CROP.h}&fit=crop&q=85`
+  return url + base + (extra ? `&${extra}` : '')
+}
+
 // ─── Pexels search ─────────────────────────────────────────────────────────
 
 /**
@@ -301,7 +337,11 @@ async function fetchJson<T>(
  * candidate whose aspect ratio is reasonably landscape. Falls back to the
  * first non-typography candidate if none have a great aspect ratio.
  *
- * Returns the `large2x` URL (1880×1255 max — closest to our 1344×768 target).
+ * 2026-06 (Issue 2): the returned URL now carries CDN crop params
+ * (w=1920&h=1080&fit=crop) so the downloaded file is an exact 16:9 Full-HD
+ * crop of the ORIGINAL-resolution photo — no letterbox, no upscale blur.
+ * (`orientation=landscape` on the search API still applies — it ranks
+ * landscape photos first — but the CDN crop is what GUARANTEES 16:9.)
  */
 export async function searchPexels(
   query: string
@@ -366,13 +406,18 @@ export async function searchPexels(
       best = photos[0]
     }
     const photo = best
-    const photoUrl = photo.src.large2x || photo.src.large || photo.src.original
+    // Issue 2 fix: prefer `original` when it exists (CDN params resize FROM
+    // the source, so starting from original gives the sharpest 1920×1080),
+    // then large2x/large as fallbacks — all get the crop params appended.
+    const rawUrl = photo.src.original || photo.src.large2x || photo.src.large
+    const photoUrl = withCropParams(rawUrl)
     return {
       ok: true,
       photoUrl,
       photographer: photo.photographer,
-      width: photo.width,
-      height: photo.height,
+      // The DELIVERED file is exactly 1920×1080 (CDN crop) — report that.
+      width: STOCK_CDN_CROP.w,
+      height: STOCK_CDN_CROP.h,
       alt: photo.alt
     }
   } catch (err) {
@@ -394,8 +439,12 @@ export async function searchPexels(
  * candidates, skip any whose description/alt_description contains typography
  * markers, prefer landscape aspect ratio.
  *
- * Returns the `regular` URL (1080×1350 max — Unsplash recommends "regular"
- * for most web use; we still downscale/letterbox to 1344×768 target downstream).
+ * 2026-06 (Issue 2 — the BLUR culprit): `urls.regular` is capped at 1080px
+ * wide — upscaled 1.78× to 1920 it produced visibly soft frames. We now build
+ * the URL from `urls.raw` (the original imgix URL) with explicit
+ * w=1920&h=1080&fit=crop&q=85 — an exact 16:9 Full-HD center-crop at native
+ * resolution. `fm=jpg` guarantees a JPEG payload (raw can be HEIC/AVIF for
+ * some uploads, which older FFmpeg builds can't decode).
  */
 export async function searchUnsplash(
   query: string
@@ -455,12 +504,17 @@ export async function searchUnsplash(
       best = results[0]
     }
     const photo = best
+    // Issue 2 fix: raw + CDN crop params = exact 1920×1080 crop at native
+    // resolution. Fall back to full/regular (still gets crop params).
+    const rawUrl = photo.urls.raw || photo.urls.full || photo.urls.regular
+    const photoUrl = withCropParams(rawUrl, 'fm=jpg')
     return {
       ok: true,
-      photoUrl: photo.urls.regular || photo.urls.full,
+      photoUrl,
       photographer: photo.user?.name,
-      width: photo.width,
-      height: photo.height,
+      // The DELIVERED file is exactly 1920×1080 (CDN crop) — report that.
+      width: STOCK_CDN_CROP.w,
+      height: STOCK_CDN_CROP.h,
       alt: photo.alt_description || photo.description || undefined
     }
   } catch (err) {

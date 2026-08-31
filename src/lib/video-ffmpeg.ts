@@ -104,10 +104,13 @@ export function buildVideoCommand(opts: VideoBuildOptions): string[] {
   args.push('-i', audioPath)
 
   // ── filter_complex ──
+  // Issue 2a fix: crop-to-fill (object-fit: cover) instead of pad/letterbox —
+  // center-crop fills the whole 16:9 frame with no black bars. Non-16:9
+  // sources (4:3, square, portrait stock photos) now cover-crop exactly.
   const parts: string[] = []
   for (let i = 0; i < N; i++) {
     parts.push(
-      `[${i}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=yuv420p[v${i}]`
+      `[${i}:v]scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height}:(iw-ow)/2:(ih-oh)/2,setsar=1,fps=${fps},format=yuv420p[v${i}]`
     )
   }
 

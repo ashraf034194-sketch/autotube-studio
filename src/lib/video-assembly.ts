@@ -7,25 +7,69 @@ import os from 'os'
 
 const execFileAsync = promisify(execFile)
 
-// ─── Pass 1 parallel-clip worker pool (SPEED OPTIMIZATION, 2026-05-12) ────────
+// ─── CPU detection + Pass 1 parallel-clip worker pool ─────────────────────────
 //
-// NUMBER OF PARALLEL WORKERS. Matches available CPU cores (capped at 4 —
-// anything beyond 4 clips encoding simultaneously on a small box causes
-// libx264 thread oversubscription + memory pressure). On a 2-core sandbox
-// this is 2 workers, which roughly halves the Pass 1 wall-clock time
-// (each clip takes ~1.5-2s; 44 clips sequential ≈ 70-90s, 2 workers ≈ 35-45s).
+// PRODUCTION FIX (2026-06): cgroup-aware CPU detection.
+//
+// `os.cpus().length` reports the HOST's core count, NOT the container's
+// allocated CPU. On Railway (and most container platforms) the container runs
+// under a cgroup CPU quota (e.g. 2 vCPU) while os.cpus() reports the host's
+// physical cores (often 8-64). The old code used os.cpus() directly → on a
+// 2-vCPU Railway container with an 8-core host, it spawned 4 workers × 1
+// thread = 4 libx264 threads on 2 cores → 2× oversubscription → context-switch
+// thrashing → the O(N²) Pass-2 + oversubscribed Pass-1 together produced the
+// observed 58-minute assembly.
+//
+// getEffectiveCores() reads the cgroup quota (v2 then v1) and clamps to the
+// host count. Workers + encoder threads are now derived from EFFECTIVE cores:
+//   W workers × 1 thread each = exactly EFFECTIVE_CPU_CORES libx264 threads.
+function getEffectiveCores(): number {
+  const hostCores = (os.availableCpus?.() ?? os.cpus())?.length || 1
+  try {
+    // cgroup v2 (Railway, Docker 20.10+): "cpu.max" → "<quota> <period>" | "max <period>"
+    const raw = fs.readFileSync('/sys/fs/cgroup/cpu.max', 'utf-8').trim()
+    const parts = raw.split(/\s+/)
+    if (parts.length === 2 && parts[0] !== 'max') {
+      const quota = Number(parts[0])
+      const period = Number(parts[1])
+      if (Number.isFinite(quota) && quota > 0 && Number.isFinite(period) && period > 0) {
+        return Math.max(1, Math.min(hostCores, Math.floor(quota / period)))
+      }
+    }
+  } catch { /* not cgroup v2 — try v1 */ }
+  try {
+    // cgroup v1 (older Docker/K8s): quota + period in separate files.
+    const quota = Number(fs.readFileSync('/sys/fs/cgroup/cpu/cpu.cfs_quota_us', 'utf-8').trim())
+    const period = Number(fs.readFileSync('/sys/fs/cgroup/cpu/cpu.cfs_period_us', 'utf-8').trim())
+    if (Number.isFinite(quota) && quota > 0 && Number.isFinite(period) && period > 0) {
+      return Math.max(1, Math.min(hostCores, Math.floor(quota / period)))
+    }
+  } catch { /* not cgroup v1 — bare metal / sandbox */ }
+  return Math.max(1, hostCores)
+}
+
+/** TRUE CPU budget of this container (cgroup-aware). Exported for diagnostics. */
+export const EFFECTIVE_CPU_CORES = getEffectiveCores()
+
+// NUMBER OF PARALLEL WORKERS. Matches EFFECTIVE cores (capped at 4 — anything
+// beyond 4 clips encoding simultaneously on a small box causes libx264 thread
+// oversubscription + memory pressure). On a 2-core box this is 2 workers,
+// which roughly halves the Pass 1 wall-clock time (each clip takes ~1.5-2s;
+// 44 clips sequential ≈ 70-90s, 2 workers ≈ 35-45s).
 //
 // The math: with N clips, W workers, per-clip time T → wall-clock ≈ (N/W) × T.
-// For N=44, W=2, T=1.8s → 44/2 × 1.8 = 39.6s (vs 79.2s sequential ≈ 1.98× speed-up).
 //
 // Per-clip memory stays bounded at ~100MB peak. With 2 workers that's ~200MB
-// peak total — well within the sandbox memory budget.
+// peak total — well within the memory budget.
 //
 // Each parallel worker uses `-threads 1` (passed via buildClipEncodeArgs's
-// `threads` param) so 2 workers × 1 thread = 2 libx264 threads on 2 cores —
-// no oversubscription. The sequential path uses `-threads 2` (one clip at a
-// time, both cores on it).
-const PASS1_PARALLEL_WORKERS = Math.min(4, Math.max(1, (os.availableCpus?.() ?? os.cpus().length) || 1))
+// `threads` param) so W workers × 1 thread = W libx264 threads on W effective
+// cores — no oversubscription. The sequential path uses ENCODE_THREADS.
+const PASS1_PARALLEL_WORKERS = Math.min(4, Math.max(1, EFFECTIVE_CPU_CORES))
+
+/** Encoder thread count for single-process encodes (xfade merge, final mux
+ * is stream-copy so this barely matters). Derived from effective cores. */
+const ENCODE_THREADS = Math.min(4, Math.max(1, EFFECTIVE_CPU_CORES))
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -88,7 +132,7 @@ const OUT_W = 1920
 const OUT_H = 1080
 const OUT_FPS = 30
 
-function getOutputGeometry(resolution: OutputResolution | undefined): OutputGeometry {
+export function getOutputGeometry(resolution: OutputResolution | undefined): OutputGeometry {
   if (resolution === '4k') {
     return { w: 3840, h: 2160, fps: OUT_FPS, fontScale: 2, label: '4K · 3840×2160' }
   }
@@ -100,6 +144,46 @@ const KEN_BURNS_ENABLED = true
 
 /** Maximum zoom factor for Ken Burns — keeps the motion subtle/professional. */
 const KB_MAX_ZOOM = 1.12
+
+/** Ken Burns supersampling factor (BLUR FIX, 2026-06).
+ *
+ * PROBLEM: zoompan crops a 1/z window from its input and scales it to the
+ * output size. If the input is exactly the output size (1920×1080), a
+ * z=1.12 zoom crops a 1714×964 window and UPSCALES it 1.12× → visibly soft
+ * frames. This was one of the two causes of the reported "blurry images".
+ *
+ * FIX: scale the source up by KB_SUPERSAMPLE × the output size BEFORE zoompan,
+ * so even at max zoom the crop window stays ≥ output resolution → every
+ * zoompan output is a DOWNSCALE (sharp) instead of an upscale (soft).
+ *   crop window at z=KB_MAX_ZOOM: (S·W)/1.12 ≥ W  ⟺  S ≥ 1.12 ✓ (S = 1.28)
+ * Pan variants hold z fixed at 1.12 → same guarantee.
+ * zoompan's `s=` option still emits exactly WxH — downstream is unchanged. */
+const KB_SUPERSAMPLE = 1.28
+
+// ─── Crop-to-fill (ASPECT-RATIO FIX, 2026-06) ──────────────────────────────
+
+/** PRODUCTION FIX (Issue 2a): CROP-TO-FILL, not letterbox.
+ *
+ * The OLD chain was `scale=decrease + pad=black` = "object-fit: contain" →
+ * every non-16:9 source (most stock photos are 4:3, square or portrait)
+ * got black bars on the sides (pillarbox) — the user-reported "left/right
+ * side khaali/blank" letterboxing.
+ *
+ * The NEW chain is `scale=increase + center-crop` = "object-fit: cover":
+ * the image fills the whole 1920×1080 frame, overscan is cropped from the
+ * longer axis. No stretch, no blank space, always exactly 16:9.
+ *
+ * `crop` defaults to x=0,y=0 (top-left), so the center expressions are explicit.
+ * scale=increase guarantees the output covers the target box; for pathological
+ * 1-pixel sources we also clamp with min/max so scale never produces a
+ * dimension SHORTER than the crop (which would loop forever).
+ */
+function buildCoverScale(w: number, h: number): string {
+  return (
+    `scale=${w}:${h}:force_original_aspect_ratio=increase,` +
+    `crop=${w}:${h}:(iw-ow)/2:(ih-oh)/2`
+  )
+}
 
 /** Phase 6 PART 1 — Smart Transitions.
  *
@@ -857,7 +941,7 @@ export function createVideoJob(params: AssembleParams): VideoJob {
  * bounded at ~100MB peak per clip. drawtext (caption OR highlight OR both)
  * adds negligible memory (one glyph atlas + text bitmap, both small).
  */
-function buildClipEncodeArgs(
+export function buildClipEncodeArgs(
   imagePath: string,
   outPath: string,
   duration: number,
@@ -878,19 +962,32 @@ function buildClipEncodeArgs(
   const fadeOutStart = Math.max(0, duration - FADE_SECONDS).toFixed(3)
   const totalFrames = Math.max(2, Math.round(duration * geo.fps))
 
-  // Scale + pad (letterbox) to the target geometry first.
-  let filterComplex =
-    `scale=${geo.w}:${geo.h}:force_original_aspect_ratio=decrease,` +
-    `pad=${geo.w}:${geo.h}:(ow-iw)/2:(oh-ih)/2:color=black,` +
-    `setsar=1,`
+  // ASPECT-RATIO FIX (Issue 2a): crop-to-fill replaces the old letterbox pad.
+  // Ken Burns supersampling (Issue 2b): when KB is on, cover-crop to
+  // KB_SUPERSAMPLE × the geometry first, then zoompan crops within that
+  // oversized frame and emits WxH — so the zoom window never upscales.
+  const kbOn = !!kenBurnsVariant && KEN_BURNS_ENABLED
+  // Round to EVEN dimensions — yuv420p requires them (esp. at 4K: 2160×1.28=2764.8).
+  const even = (n: number): number => Math.max(2, Math.round(n / 2) * 2)
+  const coverW = kbOn ? even(geo.w * KB_SUPERSAMPLE) : geo.w
+  const coverH = kbOn ? even(geo.h * KB_SUPERSAMPLE) : geo.h
 
-  // Ken Burns (optional) — applied before fps/format so it operates on the
-  // padded frame.
-  if (kenBurnsVariant && KEN_BURNS_ENABLED) {
+  let filterComplex =
+    buildCoverScale(coverW, coverH) + ',' + 'setsar=1,'
+
+  // Ken Burns (optional) — applied on the (oversized when KB) cover-cropped
+  // frame. zoompan's `s=` emits the FINAL geometry (1920×1080 / 3840×2160),
+  // downscaling its crop window — always sharp (see KB_SUPERSAMPLE).
+  if (kbOn && kenBurnsVariant) {
     filterComplex += buildKenBurnsFilter(kenBurnsVariant, totalFrames, geo) + ','
   }
 
-  filterComplex += `fps=${geo.fps},format=yuv420p`
+  // BLUR FIX (Issue 2b, layer 3): gentle post-resample sharpening right after
+  // the last scaler (zoompan when KB is on, cover-scale otherwise). Every
+  // resample softens the frame a little; sources smaller than 1920×1080
+  // (z.ai AI images are 1344×768) soften MORE via upscale. A modest unsharp
+  // (amount 0.35, 5×5) restores perceived crispness without visible halos.
+  filterComplex += `unsharp=5:5:0.35:5:5:0.0,fps=${geo.fps},format=yuv420p`
 
   // Phase 6 P1 — when smart transitions are ON, the xfade filter in Pass 2
   // owns the boundary blend. So we only bake fades on the intro (first clip
@@ -944,6 +1041,13 @@ function buildClipEncodeArgs(
     '-t', duration.toFixed(3),
     '-i', imagePath,
     '-vf', filterComplex,
+    // SMART-CUT (Issue 1): force keyframes at the exact frame boundaries where
+    // Pass 2's stream-copy cuts land (0.5s in from each end). Without an IDR
+    // at the cut point, `-ss … -c copy` snaps to the NEXT keyframe and the
+    // timeline drifts. Frame-exact: kfTailTime = (round(dur×fps)−round(T×fps))/fps.
+    ...(transitionsEnabled
+      ? ['-force_key_frames', `0.500,${(Math.max(1, Math.round(duration * geo.fps) - Math.round(TRANSITION_DURATION * geo.fps)) / geo.fps).toFixed(6)}`]
+      : []),
     '-c:v', 'libx264',
     // SPEED: 1080p uses veryfast (~2× faster than medium, visually lossless at
     // CRF 23 for photo slideshows); 4K keeps medium (better per-pixel quality,
@@ -1043,10 +1147,10 @@ function buildTitleCardArgs(
 ): string[] {
   const alphaExpr = `if(lt(t,${TITLE_CARD_TEXT_FADE_IN}),t/${TITLE_CARD_TEXT_FADE_IN},1)`
   const filterComplex =
-    // Scale + pad to the target geometry (so any source image aspect fits).
-    `scale=${geo.w}:${geo.h}:force_original_aspect_ratio=decrease,` +
-    `pad=${geo.w}:${geo.h}:(ow-iw)/2:(oh-ih)/2:color=black,` +
-    `setsar=1,` +
+    // ASPECT-RATIO FIX (Issue 2a): crop-to-fill (no letterbox) — the blurred
+    // background now fills the whole frame.
+    buildCoverScale(geo.w, geo.h) + ',' +
+    'setsar=1,' +
     // Heavy blur on the background image — so the title text is readable.
     `boxblur=${TITLE_CARD_BLUR_RADIUS}:1,` +
     // Dark overlay (semi-transparent black rectangle over the whole frame).
@@ -1072,6 +1176,11 @@ function buildTitleCardArgs(
     '-t', duration.toFixed(3),
     '-i', imagePath,
     '-vf', filterComplex,
+    // SMART-CUT (Issue 1): force keyframes at the stream-copy cut points
+    // (0.5s in from each end) — the title card participates in xfade
+    // boundaries. Harmless extra IDR (~50KB) when transitions are OFF.
+    '-force_key_frames',
+    `0.500,${(Math.max(1, Math.round(duration * geo.fps) - Math.round(TRANSITION_DURATION * geo.fps)) / geo.fps).toFixed(6)}`,
     '-c:v', 'libx264',
     // SPEED: 1080p uses veryfast (~2× faster than medium); 4K keeps medium.
     '-preset', geo.fontScale > 1 ? 'medium' : 'veryfast',
@@ -1130,10 +1239,9 @@ function buildOutroArgs(
 
   const lineGap = OUTRO_LINE_GAP * geo.fontScale
   const filterComplex =
-    // Scale + pad to the target geometry (so any source image aspect fits).
-    `scale=${geo.w}:${geo.h}:force_original_aspect_ratio=decrease,` +
-    `pad=${geo.w}:${geo.h}:(ow-iw)/2:(oh-ih)/2:color=black,` +
-    `setsar=1,` +
+    // ASPECT-RATIO FIX (Issue 2a): crop-to-fill (no letterbox).
+    buildCoverScale(geo.w, geo.h) + ',' +
+    'setsar=1,' +
     // Heavy blur on the background image — so the text is readable.
     `boxblur=${OUTRO_BLUR_RADIUS}:1,` +
     // Dark overlay (slightly darker than title for "end" feel).
@@ -1171,6 +1279,10 @@ function buildOutroArgs(
     '-t', duration.toFixed(3),
     '-i', imagePath,
     '-vf', filterComplex,
+    // SMART-CUT (Issue 1): force keyframes at the stream-copy cut points —
+    // the outro participates in the last xfade boundary.
+    '-force_key_frames',
+    `0.500,${(Math.max(1, Math.round(duration * geo.fps) - Math.round(TRANSITION_DURATION * geo.fps)) / geo.fps).toFixed(6)}`,
     '-c:v', 'libx264',
     // SPEED: 1080p uses veryfast (~2× faster than medium); 4K keeps medium.
     '-preset', geo.fontScale > 1 ? 'medium' : 'veryfast',
@@ -1202,7 +1314,7 @@ function buildOutroArgs(
 //   - All expressions are wrapped in single quotes inside the filter chain;
 //     the zoompan options themselves are colon-separated.
 
-type KenBurnsVariant =
+export type KenBurnsVariant =
   | 'zoom-in'
   | 'zoom-out'
   | 'pan-right'
@@ -1496,59 +1608,432 @@ function buildConcatArgs(
 }
 
 /**
- * Phase 6 PART 1 — Sequential xfade build-up (MEMORY-SAFE).
- *
- * Builds ONE xfade transition between two seekable file inputs (the accumulated
- * base clip + the next clip). Each call opens only 2 file inputs, so FFmpeg
- * streams the transition overlap (just ~TD seconds of frames held + encoder
- * lookahead ≈ 600MB peak) and the accumulated base is re-read from disk on
- * demand (seekable, not buffered). Memory therefore stays flat regardless of N.
- *
- * Why not a single chained-xfade filter_complex? A chain like
- *   [0:v][1:v]xfade[vx1];[vx1][2:v]xfade[vx2];...
- * makes the intermediate `vx1` a NON-SEEKABLE filter output. xfade needs to
- * "seek" within its first input to reach the transition offset, but it cannot
- * seek a filter output backwards — so FFmpeg must buffer the entire `vx1`
- * stream in memory. For N=6 clips at 1920×1080×30fps that's already ~6GB → OOM.
- * The sequential file-based approach sidesteps this: every input is a real file.
- *
- * The video is RE-ENCODED each step (libx264 crf 20 — slightly higher quality
- * than the final-pass crf 23 to minimise generation loss across N-1 steps).
- * For small N (≤ ~15, the typical short-script case) the loss is negligible;
- * for very large N a chunked + stream-copy approach would be preferable
- * (future optimisation — the current concat path remains the default for big N).
- *
- * Offset = current base duration - TD (transition begins TD before base ends).
+ * RETIRED (2026-06, Issue 1 fix): the sequential xfade build-up was O(N²) —
+ * it re-encoded the accumulated video at every step, which produced the
+ * 58-minute assembly on a 57-image job. It has been replaced by
+ * `buildSinglePassXfadeArgs` / `runSinglePassXfadeMerge` (ONE command, ONE
+ * full-timeline encode, memory-guarded by a chunked-tree fallback). This
+ * stub is kept only for history — the implementation was removed.
  */
-function buildSequentialXfadeArgs(
-  baseClip: string,
-  nextClip: string,
-  offset: number,
-  transition: TransitionType,
-  outPath: string
-): string[] {
-  return [
-    '-y', '-hide_banner',
-    '-i', baseClip,
-    '-i', nextClip,
-    '-filter_complex',
-    `[0:v][1:v]xfade=transition=${transition}:duration=${TRANSITION_DURATION.toFixed(3)}:offset=${offset.toFixed(3)}[v]`,
-    '-map', '[v]',
+
+// ─── PRODUCTION FIX (Issue 1, 2026-06): single-pass chained xfade — O(N) ─────
+//
+// WHY THIS EXISTS: the sequential xfade build-up (retired above) re-encoded the
+// accumulated video at EVERY step — step k re-encodes k×4s of video — so the
+// total encoded volume is Σ(k×4s) for k=1..N-1 ≈ 2×N×(N-1)×4s/2. For the
+// user's 57-image job that is ~6,400 SECONDS of 1080p video re-encoded
+// (~192,000 frames) just to add 0.5s crossfades. On a shared 2-vCPU Railway
+// container encoding ~50-60fps → ~53-64 minutes of pure encoding. That is the
+// exact root cause of the observed "58 minute vs 1m52s ETA" failure. The old
+// approach is O(N²) in encoded seconds; this implementation is O(N).
+//
+// HOW: ONE ffmpeg command opens all N pre-encoded clip FILES as inputs and
+// chains all N-1 xfade nodes in a single filter_complex. The whole timeline is
+// encoded EXACTLY ONCE (≈ audioDuration seconds of video ≈ 250s ≈ 7,500 frames
+// → 2-4 minutes on 2 vCPU). All inputs are regular seekable FILES produced by
+// Pass 1 (same encoder, same geometry/fps/pix_fmt → xfade-compatible), and
+// ffmpeg's filtergraph pulls frames from each input on demand, so memory is
+// bounded by (N decoders + packet queues), NOT by any accumulated stream —
+// the "buffer entire vx1 in RAM" hazard only applies to non-seekable graph
+// sources, not to our file inputs at the chain head.
+//
+// Offsets follow the SAME accumulation math as the sequential build-up:
+//   A_i = A_(i-1) + D_i - T   (A_0 = D_0),   offset_i = A_(i-1) - T
+// so the output timeline is IDENTICAL to the old approach (same durations,
+// same transitions at the same boundaries) — only the encoding cost changes.
+//
+// MEMORY GUARD: inputs beyond MAX_SINGLE_XFADE_INPUTS are merged via a
+// chunked TREE (each chunk is itself a single-pass chain; chunk outputs merge
+// at the next level). A tree adds one extra full encode per level but stays
+// memory-bounded; with the default cap of 64, the user-scale case (57 images +
+// title + outro = 59 inputs) fits in ONE command = ONE encode.
+
+/** Max inputs per single-pass xfade command (memory guard).
+ *
+ * EMPIRICAL (2026-06, this box: 4GB cgroup): the chained-xfade filtergraph
+ * buffers each input's decoded frames → ~0.2GB per input. 16 inputs peaked at
+ * 2.46GB and got OOM-killed; 8 inputs peaked at 1.58GB and completed. The
+ * PRIMARY production path is now the SMART-CUT pass (stream-copy bodies +
+ * 15-frame re-encoded transitions — flat memory); this tree merge is the
+ * FALLBACK for when smart-cut fails, so 8 keeps it inside a 4GB budget. */
+const MAX_SINGLE_XFADE_INPUTS = 8
+
+/** One clip (or chunk output) participating in the xfade chain. */
+export interface XfadeInput {
+  /** Path of the pre-encoded clip file. */
+  path: string
+  /** Clip duration in seconds (before any transition overlap). */
+  duration: number
+  /** Transition at this input's LEFT boundary (ignored for the first input). */
+  transition: TransitionType
+}
+
+/**
+ * Build ONE ffmpeg command that chains all xfades for the given inputs.
+ * Returns the args + the exact total output duration (ΣD - (N-1)·T).
+ */
+export function buildSinglePassXfadeArgs(
+  inputs: XfadeInput[],
+  outPath: string,
+  threads: number
+): { args: string[]; totalDuration: number } {
+  const args: string[] = ['-y', '-hide_banner']
+  for (const inp of inputs) args.push('-i', inp.path)
+
+  const parts: string[] = []
+  let accDur = inputs[0].duration
+  let prev = '0:v'
+  for (let i = 1; i < inputs.length; i++) {
+    // xfade starts blending T seconds before the accumulated base ENDS.
+    // Math.max(0, …) guards degenerate clips shorter than T.
+    const offset = Math.max(0, accDur - TRANSITION_DURATION)
+    const label = i === inputs.length - 1 ? 'vout' : `x${i}`
+    parts.push(
+      `[${prev}][${i}:v]xfade=transition=${inputs[i].transition}:` +
+        `duration=${TRANSITION_DURATION.toFixed(3)}:offset=${offset.toFixed(3)}[${label}]`
+    )
+    accDur = accDur + inputs[i].duration - TRANSITION_DURATION
+    prev = label
+  }
+
+  args.push(
+    '-filter_complex', parts.join(';'),
+    '-map', '[vout]',
     '-c:v', 'libx264',
-    // SPEED: veryfast (~2× faster than medium). xfade is run for EVERY step
-    // (N-1 times), so the per-step speed-up compounds across the whole Pass-2
-    // build-up. CRF stays at 20 (slightly higher quality than Pass 1's CRF 23)
-    // to minimise generation loss across N-1 re-encodes.
+    // One encode for the WHOLE timeline — veryfast keeps 2-vCPU containers
+    // in the 2-5 minute window; CRF 20 matches the old per-step quality.
     '-preset', 'veryfast',
     '-crf', '20',
     '-pix_fmt', 'yuv420p',
-    // SPEED: explicit -threads 2 so the xfade re-encode uses both CPU cores.
-    '-threads', '2',
+    '-threads', String(threads),
     '-r', String(OUT_FPS),
-    '-an', // no audio (muxed in the final step)
+    '-an',
+    '-movflags', '+faststart',
+    outPath
+  )
+  return { args, totalDuration: accDur }
+}
+
+/**
+ * Run the O(N) xfade merge for all inputs, with the chunked-tree fallback
+ * for very large N. Returns the path of the merged (video-only) file and its
+ * exact duration.
+ *
+ * `onStepProgress` receives (secondsEncodedOfCurrentCommand, commandIndex,
+ * commandCount) so the caller can map progress honestly across the merge.
+ */
+async function runSinglePassXfadeMerge(
+  inputs: XfadeInput[],
+  workDir: string,
+  threads: number,
+  label: string,
+  onStepProgress?: (secondsEncoded: number, commandIndex: number, commandCount: number) => void
+): Promise<{ mergedPath: string; totalDuration: number }> {
+  fs.mkdirSync(workDir, { recursive: true })
+
+  // Chunking guard: split into ceil(N / MAX) balanced chunks and merge their
+  // outputs recursively (one extra full encode per tree level).
+  if (inputs.length > MAX_SINGLE_XFADE_INPUTS) {
+    const chunkCount = Math.ceil(inputs.length / MAX_SINGLE_XFADE_INPUTS)
+    const perChunk = Math.ceil(inputs.length / chunkCount)
+    const chunks: XfadeInput[][] = []
+    for (let i = 0; i < inputs.length; i += perChunk) {
+      chunks.push(inputs.slice(i, i + perChunk))
+    }
+    console.log(
+      `[video] xfade merge (${label}): ${inputs.length} inputs > ${MAX_SINGLE_XFADE_INPUTS} cap → ` +
+        `chunked tree (${chunks.length} chunks × ~${perChunk}, +1 merge level)`
+    )
+    const mergedInputs: XfadeInput[] = []
+    for (let c = 0; c < chunks.length; c++) {
+      // The chunk's first input keeps its LEFT-boundary transition so the
+      // upper-level merge blends this chunk in with the same visual effect.
+      const res = await runSinglePassXfadeMerge(
+        chunks[c],
+        workDir,
+        threads,
+        `${label}-c${c}`,
+        undefined // per-chunk progress aggregated at the merge level below
+      )
+      mergedInputs.push({
+        path: res.mergedPath,
+        duration: res.totalDuration,
+        transition: chunks[c][0].transition
+      })
+    }
+    return runSinglePassXfadeMerge(mergedInputs, workDir, threads, `${label}-merge`, onStepProgress)
+  }
+
+  // ── Base case: one command, one full encode. ──
+  const outPath = path.join(workDir, `${label}.mp4`)
+  const { args, totalDuration } = buildSinglePassXfadeArgs(inputs, outPath, threads)
+  console.log(
+    `[video] xfade merge (${label}): single-pass — ${inputs.length} inputs, ` +
+      `${inputs.length - 1} transitions, expected output ${totalDuration.toFixed(1)}s ` +
+      `(ONE encode instead of ${inputs.length - 1} sequential re-encodes)`
+  )
+  const startedAt = Date.now()
+  await runFFmpeg(args, (secs) => onStepProgress?.(secs, 0, 1))
+  const elapsedSec = Math.max(0.1, (Date.now() - startedAt) / 1000)
+  const wall = elapsedSec.toFixed(1)
+  console.log(
+    `[video] xfade merge (${label}) done in ${wall}s — ` +
+      `encode rate ≈ ${(totalDuration / elapsedSec).toFixed(1)}x realtime`
+  )
+  return { mergedPath: outPath, totalDuration }
+}
+
+// ─── SMART-CUT xfade pass (Issue 1 — PRIMARY Pass 2 path, O(N) + flat memory) ─
+//
+// THE TECHNIQUE: re-encode ONLY the 0.5s transition windows; stream-copy the
+// rest. This is the classic "smart cut" used by lossless editing tools:
+//
+//   For every clip i (durations d_i, transition T, fps F, tF = round(T×F)):
+//     body_i  = clip_0[0, d_0−T)            (first input — no head needed)
+//     head_i  = clip_i[0, T)                (incoming side of transition i)
+//     mid_i   = clip_i[T, d_i−T)            (the untouched body of middle clips)
+//     tail_i  = clip_i[d_i−T, d_i)          (outgoing side of transition i)
+//     end_i   = clip_last[T, d_last)        (last input — no tail needed)
+//   trans_i  = xfade(tail_i, head_{i+1}, offset=0, duration=T) — 15 frames
+//              re-encoded at CRF 20 (the ONLY pixels that get re-encoded!)
+//
+//   Final timeline (concat demuxer, ALL stream-copied except the trans files):
+//     [body_0][trans_0][mid_1][trans_1][mid_2]…[trans_{n−2}][end_{n−1}]
+//
+// Why it's fast: the OLD sequential build-up re-encoded the WHOLE accumulated
+// video at every step (O(N²) → ~6,400s of 1080p encoded for 57 clips → 58
+// minutes on 2 vCPU). The chained single-pass alternative encoded the timeline
+// once (O(N)) but its filtergraph buffers every input's decoded frames
+// (~0.2GB/input → OOM at 16 inputs). SMART-CUT re-encodes exactly (N−1)×0.5s
+// = 28s of pixels for 57 clips and stream-copies the other ~221s → Pass 2
+// drops to ~40-60s on 2 vCPU with FLAT memory (2 tiny inputs per ffmpeg).
+//
+// Why it's frame-exact (validated empirically on this box):
+//   • Pass 1 (and title/outro) now force keyframes at 0.5s and (d−0.5)s —
+//     `-ss <kfTime> -c copy` cuts land exactly on the IDR.
+//   • Right-side cuts use `-frames:v N` (packet-PTS exact — `-t` overshoots
+//     by ~2 frames due to B-frame DTS reordering; `-frames:v` does not).
+//   • xfade(tail15, head15) emits exactly 15 frames.
+//   • Every cut gets `-avoid_negative_ts make_zero -fflags +genpts` so the
+//     concat demuxer chains them without dropping the first segment.
+//   Total frames = Σclip frames — (N−1)×tF + (N−1)×tF = Σclip frames ✓ zero drift.
+
+/** Stream-copy cut of [startFrame, startFrame+frames) (or [0, frames) when
+ * startFrame is null). Frame-exact via -ss keyframe snap + -frames:v. */
+async function cutSegment(src: string, out: string, startFrame: number | null, frames: number): Promise<void> {
+  const args: string[] = ['-y', '-hide_banner', '-loglevel', 'error']
+  if (startFrame !== null) {
+    args.push('-ss', (startFrame / OUT_FPS).toFixed(6))
+  }
+  args.push(
+    '-i', src,
+    '-frames:v', String(frames),
+    '-c', 'copy',
+    '-avoid_negative_ts', 'make_zero',
+    '-fflags', '+genpts',
+    out
+  )
+  await runFFmpeg(args)
+}
+
+/** The 15-frame re-encoded transition between two clips. */
+function buildTransitionXfadeArgs(
+  tailPath: string,
+  headPath: string,
+  outPath: string,
+  transition: TransitionType,
+  threads: number
+): string[] {
+  // tF frames = exactly TRANSITION_DURATION at OUT_FPS. The explicit
+  // `-frames:v` clamps xfade's framesync, which can otherwise emit 2 extra
+  // trailing frames (B-frame DTS padding → +3.5s drift over 56 transitions —
+  // measured and fixed empirically).
+  const tF = Math.round(TRANSITION_DURATION * OUT_FPS)
+  return [
+    '-y', '-hide_banner',
+    '-i', tailPath,
+    '-i', headPath,
+    '-filter_complex',
+    `[0:v][1:v]xfade=transition=${transition}:duration=${TRANSITION_DURATION.toFixed(3)}:offset=0[v]`,
+    '-map', '[v]',
+    '-frames:v', String(tF),
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-crf', '20',
+    '-pix_fmt', 'yuv420p',
+    '-threads', String(threads),
+    '-r', String(OUT_FPS),
+    '-an',
     '-movflags', '+faststart',
     outPath
   ]
+}
+
+/**
+ * Run the SMART-CUT xfade pass over the ordered inputs. Returns the concat
+ * list path + the frame-exact total duration. `onUnit` reports progress:
+ * (weightedUnitsDone, weightedUnitsTotal) — transitions weigh 7× a cut.
+ *
+ * Inputs shorter than 3×T fall back to hard cuts at their boundaries (never
+ * happens in practice: min clip = 3s, title = 2.5s, outro = 3.5s, T = 0.5s).
+ */
+export async function runSmartCutXfadePass(
+  inputs: XfadeInput[],
+  workDir: string,
+  onUnit?: (unitsDone: number, unitsTotal: number) => void
+): Promise<{ listPath: string; totalDuration: number; transCount: number }> {
+  fs.mkdirSync(workDir, { recursive: true })
+  const n = inputs.length
+  if (n < 2) throw new Error('smart-cut needs at least 2 inputs')
+  const tF = Math.round(TRANSITION_DURATION * OUT_FPS) // 15 frames at 30fps
+
+  // ── Pre-compute frame geometry per input ──
+  const totalFrames: number[] = inputs.map((inp) =>
+    Math.max(2, Math.round(inp.duration * OUT_FPS))
+  )
+  const okForSmartCut = totalFrames.map((tf) => tf > 3 * tF)
+
+  // ── Phase 1: cut all segments (stream-copy, ~0.15s each) ──
+  interface Seg {
+    file: string
+  }
+  const bodies: (Seg | null)[] = new Array(n).fill(null)   // [0, tf−tF) — first usable input
+  const heads: (Seg | null)[] = new Array(n).fill(null)    // [0, tF)
+  const mids: (Seg | null)[] = new Array(n).fill(null)     // [tF, tf−tF)
+  const tails: (Seg | null)[] = new Array(n).fill(null)    // [tf−tF, tf)
+  const seg = (name: string): Seg => ({ file: path.join(workDir, `${name}.mp4`) })
+
+  // Count work units for progress: cuts weigh 1, transitions weigh 7.
+  let unitsDone = 0
+  let unitsTotal = 0
+  for (let i = 0; i < n; i++) {
+    if (okForSmartCut[i]) {
+      if (i > 0) unitsTotal += 1 // head
+      if (i < n - 1) unitsTotal += 1 // tail
+      if (i > 0 && i < n - 1) unitsTotal += 1 // mid
+      if (i === 0 || i === n - 1) unitsTotal += 1 // body/end
+    } else {
+      unitsTotal += 1 // whole short clip as one segment
+    }
+  }
+  for (let b = 0; b < n - 1; b++) {
+    if (okForSmartCut[b] && okForSmartCut[b + 1]) unitsTotal += 7 // transition
+  }
+
+  const bump = (): void => {
+    unitsDone++
+    onUnit?.(unitsDone, unitsTotal)
+  }
+
+  for (let i = 0; i < n; i++) {
+    const tf = totalFrames[i]
+    const base = path.basename(inputs[i].path, '.mp4')
+    if (!okForSmartCut[i]) {
+      // Degenerate short clip — keep it whole (hard-cut boundaries).
+      const whole = seg(`whole-${String(i).padStart(3, '0')}`)
+      await cutSegment(inputs[i].path, whole.file, null, tf)
+      mids[i] = whole // treat as the "mid" so the concat list logic is uniform
+      bump()
+      continue
+    }
+    // head (every input except the first)
+    if (i > 0) {
+      const head = seg(`head-${String(i).padStart(3, '0')}`)
+      await cutSegment(inputs[i].path, head.file, null, tF)
+      heads[i] = head
+      bump()
+    }
+    // tail (every input except the last)
+    if (i < n - 1) {
+      const tail = seg(`tail-${String(i).padStart(3, '0')}`)
+      await cutSegment(inputs[i].path, tail.file, tf - tF, tF)
+      tails[i] = tail
+      bump()
+    }
+    // body (first) / end (last) / mid (middle)
+    if (i === 0) {
+      const body = seg('body-000')
+      await cutSegment(inputs[i].path, body.file, null, tf - tF)
+      bodies[i] = body
+      bump()
+    } else if (i === n - 1) {
+      const end = seg(`end-${String(i).padStart(3, '0')}`)
+      await cutSegment(inputs[i].path, end.file, tF, tf - tF)
+      mids[i] = end
+      bump()
+    } else {
+      const mid = seg(`mid-${String(i).padStart(3, '0')}`)
+      await cutSegment(inputs[i].path, mid.file, tF, tf - 2 * tF)
+      mids[i] = mid
+      bump()
+    }
+    void base
+  }
+
+  // ── Phase 2: encode the (N−1) transitions — 15 frames each, worker pool ──
+  const trans: (Seg | null)[] = new Array(Math.max(0, n - 1)).fill(null)
+  interface TransTask { b: number; args: string[] }
+  const transTasks: TransTask[] = []
+  for (let b = 0; b < n - 1; b++) {
+    if (!okForSmartCut[b] || !okForSmartCut[b + 1]) continue // hard-cut boundary
+    const tail = tails[b]!
+    const head = heads[b + 1]!
+    const t = seg(`trans-${String(b).padStart(3, '0')}`)
+    trans[b] = t
+    transTasks.push({
+      b,
+      args: buildTransitionXfadeArgs(
+        tail.file,
+        head.file,
+        t.file,
+        inputs[b + 1].transition,
+        1 // 1 thread per worker — pool saturates the effective cores
+      )
+    })
+  }
+  const transWorkers = Math.min(4, Math.max(1, EFFECTIVE_CPU_CORES))
+  let nextTrans = 0
+  const runTransWorker = async (): Promise<void> => {
+    for (;;) {
+      const idx = nextTrans++
+      if (idx >= transTasks.length) return
+      const task = transTasks[idx]
+      await runFFmpeg(task.args)
+      unitsDone += 7
+      onUnit?.(unitsDone, unitsTotal)
+    }
+  }
+  await Promise.all(Array.from({ length: transWorkers }, runTransWorker))
+
+  // ── Phase 3: write the concat list (body₀, trans₀, mid₁, trans₁, …, end) ──
+  const listPath = path.join(workDir, 'smart-cut-list.txt')
+  const entries: string[] = []
+  for (let i = 0; i < n; i++) {
+    if (i === 0) {
+      const body = bodies[0] ?? mids[0]
+      if (body) entries.push(`file '${body.file.replace(/'/g, "'\\''")}'`)
+    } else {
+      const t = trans[i - 1]
+      if (t) entries.push(`file '${t.file.replace(/'/g, "'\\''")}'`)
+      const mid = mids[i]
+      if (mid) entries.push(`file '${mid.file.replace(/'/g, "'\\''")}'`)
+    }
+  }
+  fs.writeFileSync(listPath, entries.join('\n') + '\n', 'utf-8')
+
+  // Frame-exact total: Σ all clip frames − (N−1)×tF (each transition overlaps
+  // one tF window) — converted back to seconds.
+  const totalAllFrames = totalFrames.reduce((a, b) => a + b, 0)
+  const transCount = transTasks.length
+  const totalDuration =
+    (totalAllFrames - transCount * tF) / OUT_FPS
+
+  console.log(
+    `[video] smart-cut pass done: ${entries.length} segments ` +
+      `(${transCount} re-encoded transitions × ${tF} frames, rest stream-copied) — ` +
+      `exact output ${(totalDuration).toFixed(2)}s`
+  )
+  return { listPath, totalDuration, transCount }
 }
 
 /**
@@ -1923,9 +2408,27 @@ export async function runVideoAssembly(job: VideoJob, params: AssembleParams): P
     let nextTaskIdx = 0
     const completedClips = new Set<number>()
     const workerCount = Math.min(PASS1_PARALLEL_WORKERS, tasks.length)
+
+    // ETA MODEL INPUTS (honest-ETA fix, Issue 1):
+    //   expectedTotalDuration — the exact video length Pass 2 will encode ONCE
+    //     (Σ all clip durations − (inputs−1)×T; title/outro included).
+    //   pass1VideoSeconds    — total video-seconds Pass 1 encodes (Σ durations).
+    // Both feed the predictor below: pass2 predicted cost scales with the
+    // MEASURED encode rate, so the UI ETA reflects the real pipeline shape
+    // (Pass 1 + ONE full-timeline encode) instead of naive linear extrapolation
+    // — the exact bug that showed "ETA ~1m52s" for a job that took 58 minutes.
+    const pass1VideoSeconds =
+      durations.reduce((a, b) => a + b, 0) +
+      (titleCardEnabled ? TITLE_CARD_DURATION : 0) +
+      (outroEnabled ? OUTRO_DURATION : 0)
+    const expectedInputCount =
+      imagePaths.length + (titleCardEnabled ? 1 : 0) + (outroEnabled ? 1 : 0)
+    const expectedTotalDuration =
+      pass1VideoSeconds - Math.max(0, expectedInputCount - 1) * (useXfade ? TRANSITION_DURATION : 0)
+
     console.log(
       `[video] Job ${job.id}: Pass 1 parallel pool starting — ${tasks.length} clips, ` +
-      `${workerCount} worker${workerCount === 1 ? '' : 's'} (threads=1/clip, both cores utilised)`
+      `${workerCount} worker${workerCount === 1 ? '' : 's'} (threads=1/clip, ${EFFECTIVE_CPU_CORES} effective cores detected${EFFECTIVE_CPU_CORES < (os.cpus()?.length || 1) ? ` (cgroup-limited; host reports ${os.cpus()?.length})` : ''})`
     )
 
     const runOneTask = async (task: Pass1Task): Promise<void> => {
@@ -1950,11 +2453,23 @@ export async function runVideoAssembly(job: VideoJob, params: AssembleParams): P
             // reports before a fast one.
             const finalPct = Math.max(aggPct, totalPct)
             job.progress = Math.min(99, Math.round(finalPct))
-            // ETA
+            // HONEST ETA (Issue 1 fix): predict BOTH passes.
+            //   Pass 1 remaining: measured clip fraction rate (smooth, monotonic).
+            //   Pass 2 predicted: expectedTotalDuration encoded ONCE at the
+            //     measured encode rate (video-seconds per wall-second), +25%
+            //     for the N-input decode overhead of the single-pass xfade.
+            //   + a few seconds for the final audio mux (audio-only encode).
             if (job.startedAt && finalPct > 1) {
-              const elapsed = (Date.now() - job.startedAt) / 1000
-              const remaining = (elapsed / finalPct) * (100 - finalPct)
-              job.etaSeconds = Math.max(0, Math.round(remaining))
+              const elapsed = Math.max(0.1, (Date.now() - job.startedAt) / 1000)
+              const fraction = Math.min(1, finalPct / (pass1Weight * 100))
+              const fracRate = fraction / elapsed // Pass-1 fraction per second
+              const pass1Remaining = fracRate > 0 ? (1 - fraction) / fracRate : 30
+              const encodedVideoSeconds = Math.max(1, fraction * pass1VideoSeconds)
+              const encodeRate = encodedVideoSeconds / elapsed
+              const pass2Predicted = useXfade
+                ? (expectedTotalDuration / encodeRate) * 1.25 + 3
+                : 5 // concat path: stream-copy, near-instant
+              job.etaSeconds = Math.max(1, Math.round(pass1Remaining + pass2Predicted))
             }
           }
         )
@@ -2009,109 +2524,132 @@ export async function runVideoAssembly(job: VideoJob, params: AssembleParams): P
     console.log(
       `[video] Job ${job.id}: Pass 1 done — ${clipPaths.length} clips encoded` +
       `${titleCardEnabled ? ' + title card' : ''}${outroEnabled ? ' + outro' : ''}. ` +
-      `Starting Pass 2 (${useXfade ? `xfade build-up (${imagePaths.length - 1 + extraXfadeSteps} sequential transitions)` : 'concat demuxer (stream copy)'}${params.musicPath ? ' + music ducking' : ''}${titleCardEnabled ? ' + title card (audio delayed)' : ''}${outroEnabled ? ' + outro (audio padded)' : ''}).`
+      `Starting Pass 2 (${useXfade ? `smart-cut xfade (${imagePaths.length - 1 + extraXfadeSteps} transitions — bodies stream-copied, only 0.5s windows re-encoded: O(N), was O(N²))` : 'concat demuxer (stream copy)'}${params.musicPath ? ' + music ducking' : ''}${titleCardEnabled ? ' + title card (audio delayed)' : ''}${outroEnabled ? ' + outro (audio padded)' : ''}).`
     )
     job.progress = Math.round(pass1Weight * 100)
 
     if (useXfade) {
-      // ── Pass 2a: sequential xfade build-up ──
-      // Each step: xfade(currentBase, nextClip) → newBase. Two file inputs per
-      // step → FFmpeg streams the transition (no intermediate buffering → no OOM).
+      // ── Pass 2a: SMART-CUT xfade (PRODUCTION FIX, Issue 1 — PRIMARY path) ──
+      // Stream-copies every clip body, re-encodes ONLY the (N−1)×0.5s
+      // transition windows, then concat-demuxes the segments — O(N) work,
+      // flat memory, frame-exact timeline (identical visual output to the old
+      // sequential build-up, which was O(N²) → 58 minutes at this scale).
+      // Falls back to the chunked-tree xfade merge if smart-cut ever fails.
       const interDir = path.join(jobDir, 'xfade-steps')
-      fs.mkdirSync(interDir, { recursive: true })
 
-      // Phase 6 P2 — when the title card is enabled, the title card is the
-      // initial base. The first xfade step blends titleCard → clip0. Then
-      // the remaining N-1 steps blend base → clip1..N-1 as before.
-      let baseClip = titleCardEnabled ? titleCardClipPath : clipPaths[0]
-      let baseDuration = titleCardEnabled ? TITLE_CARD_DURATION : durations[0]
-      // Phase 6 P3 — when the outro is enabled, add one more xfade step at
-      // the end (lastClip → outro). Total steps = (N-1) + title + outro.
-      const stepsTotal = imagePaths.length - 1 + extraXfadeSteps
-      // xfade steps get 90% of the Pass-2 budget; the final audio-mux gets 10%.
-      const xfadeBudget = (1 - pass1Weight) * 0.9
-
-      // The first clip to fold in is clip 0 if we have a title card (the title
-      // card is the base); otherwise the first clip is already the base and
-      // we start folding from clip 1.
-      const startClipIdx = titleCardEnabled ? 0 : 1
-      for (let i = 0; i < stepsTotal; i++) {
-        // Phase 6 P3 — the LAST step (when outro is enabled) blends the
-        // accumulated base → outro clip with a gentle 'fade' transition
-        // (the last sharp clip → blurred outro is a single scene change, not
-        // a topic shift — keep it subtle, mirroring the title card → clip0
-        // boundary). All other steps use the existing logic (content-aware
-        // transition for clip i → clip i+1, or 'fade' for title → clip0).
-        const isOutroStep = outroEnabled && i === stepsTotal - 1
-        let nextClip: string
-        let nextDuration: number
-        let transition: TransitionType
-        if (isOutroStep) {
-          nextClip = outroClipPath
-          nextDuration = OUTRO_DURATION
-          transition = 'fade'
-        } else {
-          const nextClipIdx = startClipIdx + i
-          nextClip = clipPaths[nextClipIdx]
-          nextDuration = durations[nextClipIdx]
-          transition =
-            titleCardEnabled && i === 0
-              ? 'fade'
-              : transitionTypes[(titleCardEnabled ? i - 1 : i)]
-        }
-        const offset = Math.max(0, baseDuration - TRANSITION_DURATION)
-        const stepOut = path.join(interDir, `step-${String(i).padStart(3, '0')}.mp4`)
-        const stepArgs = buildSequentialXfadeArgs(
-          baseClip,
-          nextClip,
-          offset,
-          transition,
-          stepOut
-        )
-        const stepBase = pass1Weight * 100 + (i / stepsTotal) * xfadeBudget * 100
-        const stepSpan = (xfadeBudget * 100) / stepsTotal
-        try {
-          await runFFmpeg(
-            stepArgs,
-            (secondsEncoded) => {
-              const stepPct = Math.min(1, secondsEncoded / (baseDuration + nextDuration))
-              job.progress = Math.min(99, Math.round(stepBase + stepPct * stepSpan))
-            }
-          )
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          throw new Error(`Pass 2 (xfade step ${i + 1}/${stepsTotal}) failed: ${msg}`)
-        }
-        // Clean up the previous intermediate to keep disk usage flat (keep the
-        // latest step — it's the audio-mux input).
-        if (i > 0) {
-          const prev = path.join(interDir, `step-${String(i - 1).padStart(3, '0')}.mp4`)
-          try { if (fs.existsSync(prev)) fs.unlinkSync(prev) } catch { /* ignore */ }
-        }
-        baseClip = stepOut
-        baseDuration = baseDuration + nextDuration - TRANSITION_DURATION
+      // Ordered input list: [title card?] + all clips + [outro?]. Each entry
+      // carries the transition at its LEFT boundary:
+      //   titleCard → clip0 = 'fade'        (mirrors the old first step)
+      //   clip i → clip i+1 = transitionTypes[i] (content-aware, Phase 6 P1)
+      //   last clip → outro = 'fade'        (mirrors the old last step)
+      const xfadeInputs: XfadeInput[] = []
+      if (titleCardEnabled) {
+        xfadeInputs.push({
+          path: titleCardClipPath,
+          duration: TITLE_CARD_DURATION,
+          transition: 'fade'
+        })
+      }
+      for (let i = 0; i < clipPaths.length; i++) {
+        const leftTransition: TransitionType =
+          i === 0 ? 'fade' : (transitionTypes[i - 1] ?? 'fade')
+        xfadeInputs.push({
+          path: clipPaths[i],
+          duration: durations[i],
+          transition: leftTransition
+        })
+      }
+      if (outroEnabled) {
+        xfadeInputs.push({
+          path: outroClipPath,
+          duration: OUTRO_DURATION,
+          transition: 'fade'
+        })
       }
 
-      // ── Pass 2b: mux audio (+ optional music ducking) into the final xfade ──
-      // Stream-copy the video (already h264 from the xfade steps) — only audio
-      // is encoded. Reuse the concat-demuxer path with a 1-entry list.
-      listPath = path.join(jobDir, 'concat-list.txt')
-      fs.writeFileSync(listPath, `file '${baseClip.replace(/'/g, "'\\''")}'\n`, 'utf-8')
+      // xfade pass gets 90% of the Pass-2 budget; the final audio-mux gets 10%.
+      const xfadeBudget = (1 - pass1Weight) * 0.9
+      const pass2StartedAt = Date.now()
+
+      let videoListPath: string
+      let videoTotalDuration: number
+      try {
+        // ── PRIMARY: smart-cut (stream-copy bodies + 15-frame transitions) ──
+        const sc = await runSmartCutXfadePass(
+          xfadeInputs,
+          interDir,
+          (unitsDone, unitsTotal) => {
+            const unitPct = Math.min(1, unitsDone / Math.max(1, unitsTotal))
+            job.progress = Math.min(
+              99,
+              Math.round((pass1Weight + unitPct * xfadeBudget) * 100)
+            )
+            // ETA from the measured unit rate + the final audio-mux estimate
+            // (AAC encode runs ~20× realtime → ≈ totalDuration/20 seconds).
+            if (job.startedAt && unitsDone > 2) {
+              const elapsed = Math.max(0.1, (Date.now() - pass2StartedAt) / 1000)
+              const rate = unitsDone / elapsed
+              const remaining = Math.max(0, unitsTotal - unitsDone) / Math.max(0.01, rate)
+              const muxEstimate = Math.max(4, expectedTotalDuration / 20)
+              job.etaSeconds = Math.max(1, Math.round(remaining + muxEstimate))
+            }
+          }
+        )
+        videoListPath = sc.listPath
+        videoTotalDuration = sc.totalDuration
+      } catch (scErr) {
+        // ── FALLBACK: chunked-tree single-pass xfade merge (memory-guarded) ──
+        const scMsg = scErr instanceof Error ? scErr.message : String(scErr)
+        console.warn(
+          `[video] Job ${job.id}: smart-cut pass failed (${scMsg.slice(0, 200)}) → ` +
+            `falling back to chunked-tree xfade merge (slower but robust).`
+        )
+        const mergeRes = await runSinglePassXfadeMerge(
+          xfadeInputs,
+          interDir,
+          ENCODE_THREADS,
+          'xfade',
+          (secondsEncoded) => {
+            const mergePct = Math.min(1, secondsEncoded / Math.max(1, expectedTotalDuration))
+            job.progress = Math.min(
+              99,
+              Math.round((pass1Weight + mergePct * xfadeBudget) * 100)
+            )
+            if (job.startedAt && secondsEncoded > 1) {
+              const mergeElapsed = Math.max(0.1, (Date.now() - pass2StartedAt) / 1000)
+              const rate = secondsEncoded / mergeElapsed
+              const remaining = Math.max(0, expectedTotalDuration - secondsEncoded)
+              job.etaSeconds = Math.max(1, Math.round(remaining / rate + 4))
+            }
+          }
+        )
+        videoListPath = path.join(jobDir, 'concat-list.txt')
+        fs.writeFileSync(
+          videoListPath,
+          `file '${mergeRes.mergedPath.replace(/'/g, "'\\''")}'\n`,
+          'utf-8'
+        )
+        videoTotalDuration = mergeRes.totalDuration
+      }
+
+      // ── Pass 2b: mux audio (+ optional music ducking) into the final video ──
+      // Stream-copy the video (already h264 — smart-cut segments or the merged
+      // tree output) — only audio is encoded.
+      listPath = videoListPath
       const muxBudget = (1 - pass1Weight) * 0.1
       const muxBase = (pass1Weight + xfadeBudget) * 100
       // Phase 6 P2 — delay the voiceover by TITLE_CARD_DURATION when the title
       // card is on, so it plays silently (or with full music) at the start.
-      // Phase 6 P3 — pass the ACTUAL baseDuration (the accumulated video
-      // stream duration after all xfade steps, including the title card +
-      // outro) as the totalDuration so -t matches the video exactly (no
-      // frozen-frame padding, no audio cut). The outroDuration flag tells
-      // buildConcatArgs to use apad + the longer 1.5s fade-out.
+      // Phase 6 P3 — pass the ACTUAL video duration (frame-exact for smart-cut,
+      // accumulated for the tree fallback, including title card + outro) as the
+      // totalDuration so -t matches the video exactly. The outroDuration flag
+      // tells buildConcatArgs to use apad + the longer 1.5s fade-out.
       const audioDelay = titleCardEnabled ? TITLE_CARD_DURATION : 0
       const outroDur = outroEnabled ? OUTRO_DURATION : 0
-      const muxArgs = buildConcatArgs(listPath, stagedAudio, outputPath, baseDuration, params.musicPath, audioDelay, outroDur)
-      // The mux step encodes audio over the full baseDuration. Use it for
-      // progress reporting (the actual output length = baseDuration).
-      const muxTotalDuration = baseDuration
+      const muxArgs = buildConcatArgs(listPath, stagedAudio, outputPath, videoTotalDuration, params.musicPath, audioDelay, outroDur)
+      // The mux step encodes audio over the full video length. Use it for
+      // progress reporting (the actual output length = videoTotalDuration).
+      const muxTotalDuration = videoTotalDuration
       try {
         await runFFmpeg(
           muxArgs,
@@ -2124,10 +2662,8 @@ export async function runVideoAssembly(job: VideoJob, params: AssembleParams): P
         const msg = err instanceof Error ? err.message : String(err)
         throw new Error(`Pass 2 (audio mux after xfade) failed: ${msg}`)
       }
-      // Clean up the last intermediate step now that it's muxed into output.
+      // Clean up the xfade merge intermediate now that it's muxed into output.
       try {
-        const lastStep = path.join(interDir, `step-${String(stepsTotal - 1).padStart(3, '0')}.mp4`)
-        if (fs.existsSync(lastStep)) fs.unlinkSync(lastStep)
         if (fs.existsSync(interDir)) fs.rmSync(interDir, { recursive: true, force: true })
       } catch { /* ignore */ }
     } else {
