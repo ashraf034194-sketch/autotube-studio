@@ -24,26 +24,32 @@
 #        while Railway's proxy routed to 8080 → 502.
 #
 #   This script fixes ALL of these:
-#     • Sets HOSTNAME=0.0.0.0 explicitly (the server MUST bind to all interfaces).
+#     • FORCES HOSTNAME=0.0.0.0 (unconditional override, NOT a fallback) — Railway
+#       injects HOSTNAME=container-id which resolves to loopback 127.0.0.1; if
+#       we let it through, node binds to loopback → external proxy 502s even
+#       though the server is "ready". The hard `HOSTNAME="0.0.0.0"` assignment
+#       overrides Railway's injection so node binds to ALL interfaces.
 #     • Falls back to PORT=8080 (NOT 3000) when PORT is unset — matches the
 #       port Railway's Networking section expects, so even if the newer UI
 #       doesn't inject PORT, the app listens on the right port.
 #     • Defaults DATABASE_URL to an ephemeral path if unset (so the app boots).
 #     • Creates the DB file's parent directory (so SQLite can write the file).
 #     • Logs a startup banner showing PORT (+ source: env-var vs default-8080),
-#       HOSTNAME, DATABASE_URL, runtimes — so deploy logs make any mismatch
-#       diagnosable at a glance.
+#       HOSTNAME (forced override, shows Railway's original value too),
+#       DATABASE_URL, runtimes — so deploy logs make any mismatch diagnosable.
 #     • Uses `exec` so node becomes PID 1 (receives Railway's SIGTERM directly).
 #
 #   Next.js standalone server.js (auto-generated) reads:
 #       process.env.PORT     (Railway injects this — dynamic; our fallback 8080)
-#       process.env.HOSTNAME  (we set to 0.0.0.0 here)
+#       process.env.HOSTNAME  (we FORCE to 0.0.0.0 — overrides Railway's container-id)
 #   and binds to 0.0.0.0:$PORT. Confirmed in .next/standalone/server.js lines 8-9.
 #
 #   VERIFICATION: after deploy, check Railway → Deploy logs for the line
-#     [start] PORT=8080 (source: env-var)  HOSTNAME=0.0.0.0  ...
-#   If source shows 'default-8080', Railway isn't injecting PORT — set
-#   PORT=8080 manually in Railway → Variables tab to force it.
+#     [start] PORT=8080 (source: env-var)  HOSTNAME=0.0.0.0 (forced override of Railway's 'df59b36ecff4')  ...
+#   - PORT: if source shows 'default-8080', Railway isn't injecting PORT — set
+#     PORT=8080 manually in Railway → Variables tab to force it.
+#   - HOSTNAME: MUST show 0.0.0.0 (with the original container-id in quotes).
+#     If it shows the container-id alone, the override didn't take → still 502.
 #
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -69,11 +75,29 @@ if [ -z "${PORT:-}" ]; then
 fi
 export PORT
 
-# ─── 2. HOSTNAME (bind to all interfaces — REQUIRED by Railway) ──────────────
-# Railway's reverse proxy reaches the container over the external network
-# interface. If the app binds to 127.0.0.1/localhost, the proxy gets connection
-# refused → 502. Force 0.0.0.0 unless explicitly overridden.
-: "${HOSTNAME:=0.0.0.0}"
+# ─── 2. HOSTNAME (bind to ALL interfaces — REQUIRED by Railway) ──────────────
+# *** ROOT CAUSE OF THE RAILWAY 502 ***
+# Railway sets HOSTNAME to the container's hostname (e.g. "df59b36ecff4" — a
+# random container-ID). Next.js standalone server.js does:
+#     const hostname = process.env.HOSTNAME || '0.0.0.0'
+#     startServer({ hostname, ... })     // → server.listen(port, hostname)
+# When hostname is a container ID, Node resolves it (via /etc/hosts in the
+# container) to 127.0.0.1 loopback. The server then binds to loopback ONLY.
+#
+# Consequence: the server starts fine ("Ready in 45ms"), Railway's health
+# check PASSES (it comes from inside the container → can reach loopback),
+# BUT the public-facing reverse proxy (external traffic) CANNOT reach
+# loopback → "Application failed to respond" (502 Bad Gateway). This is
+# exactly why everything looks "successful" in deploy logs yet the public
+# URL still 502s.
+#
+# FIX: FORCE HOSTNAME=0.0.0.0 unconditionally. Do NOT use the
+# `${HOSTNAME:=0.0.0.0}` fallback idiom — that only sets when unset/empty,
+# but Railway DOES set it (to the container ID), so the fallback never
+# triggered. A plain `HOSTNAME="0.0.0.0"` assignment overrides whatever
+# Railway injected, making node bind to all interfaces (external-accessible).
+HOSTNAME_ORIGINAL="${HOSTNAME:-unset}"
+HOSTNAME="0.0.0.0"
 export HOSTNAME
 
 # ─── 3. NODE_ENV ──────────────────────────────────────────────────────────────
@@ -108,7 +132,7 @@ fi
 # will 502. The "(source: …)" tag tells you whether PORT came from Railway's
 # injected env-var or our 8080 fallback — so you can tell at a glance if the
 # env-var injection is working.
-echo "[start] PORT=$PORT (source: $PORT_SOURCE)  HOSTNAME=$HOSTNAME  NODE_ENV=$NODE_ENV"
+echo "[start] PORT=$PORT (source: $PORT_SOURCE)  HOSTNAME=$HOSTNAME (forced override of Railway's '$HOSTNAME_ORIGINAL')  NODE_ENV=$NODE_ENV"
 echo "[start] DATABASE_URL=$DATABASE_URL"
 echo "[start] node=$(node -v 2>/dev/null || echo 'unknown')  bun=$(bun -v 2>/dev/null || echo 'unknown')"
 echo "[start] ffmpeg=$(ffmpeg -version 2>/dev/null | head -n1 || echo 'NOT FOUND')"
