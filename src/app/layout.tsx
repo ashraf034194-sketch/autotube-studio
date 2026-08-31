@@ -14,16 +14,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AutoTube Studio — YouTube Video Automation",
-  description: "Rewrite any YouTube transcript into an original, copyright-safe script with AI. Voiceover, AI images and video assembly coming in later phases.",
-  keywords: ["YouTube automation", "script rewriter", "transcript paraphrase", "AI video", "voiceover"],
+  title: "Flow Prompt Studio — Google Flow Image Generation Console",
+  description:
+    "Structure, validate and orchestrate image-generation prompts for Google Flow. Intelligent prompt analysis with strict fidelity — no API keys, no separate credits.",
+  keywords: [
+    "Google Flow",
+    "prompt engineering",
+    "image generation",
+    "prompt structuring",
+    "AI filmmaking",
+    "Flow prompt studio"
+  ],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "AutoTube Studio — YouTube Video Automation",
-    description: "Rewrite any YouTube transcript into an original, copyright-safe script with AI.",
-    siteName: "AutoTube Studio",
+    title: "Flow Prompt Studio — Google Flow Image Generation Console",
+    description:
+      "Intelligent prompt analysis + structuring for Google Flow image generation. Zero API keys, compliant by design.",
+    siteName: "Flow Prompt Studio",
     type: "website",
   },
 };
