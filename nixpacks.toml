@@ -74,9 +74,18 @@
 # ─── Build environment ───────────────────────────────────────────────────────
 
 [phases.setup]
-# Runtimes installed in the image. Node is the runtime (start cmd uses `node`).
-# Bun is needed for the lockfile-respecting install + the db:push step on boot.
-providers = ["node", "bun"]
+# Runtimes installed in the image.
+#   • node@22 — pinned to Node 22 (current active LTS, supported by all deps:
+#     Next.js 16.1+ requires Node 18.18+; supports 20/22; Bun 1.x supports 22;
+#     Prisma 6.x supports 22; TypeScript 5 supports 22).
+#     IMPORTANT: Node 18 was REMOVED from Nixpkgs (EOL — Railway build fails
+#     with "Node.js 18.x has reached End-Of-Life and has been removed"). Pin
+#     explicitly to 22 so Nixpacks does not fall back to the now-removed 18.
+#     The @-syntax is Nixpacks's official provider-version syntax.
+#   • bun — installed for the lockfile-respecting `bun install` AND for the
+#     `bun run db:push` step on boot. Pin to default (latest 1.x) — Bun is
+#     backward-compatible across 1.x.
+providers = ["node@22", "bun"]
 
 # System packages installed via apt during build. ffmpeg is required for the
 # video assembly pipeline (per-clip encode → xfade transitions → mux). The
