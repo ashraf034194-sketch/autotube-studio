@@ -80,6 +80,9 @@ import type {
 
 const MIN_CHARS = 50
 
+/** localStorage key remembering that the user hid the 3-step guide. */
+const ONBOARDING_KEY = 'autotube_onboarding_dismissed_v1'
+
 const SAMPLE_SCRIPT = `Hey everyone, welcome back to the channel. Today we are diving into something that quietly shapes almost everything you do: habits. Researchers estimate that around forty percent of the actions you perform every single day are not conscious decisions at all. They are habits, running on autopilot.
 
 So how does this autopilot actually work? Every habit follows a three step loop. First, there is a cue, something in your environment that triggers the behavior. Second, there is the routine, which is the behavior itself. And third, there is the reward, the small hit of satisfaction that teaches your brain to repeat the loop again next time.
@@ -204,6 +207,7 @@ export default function Home() {
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const [nowTick, setNowTick] = useState(() => Date.now())
+  const [guideOpen, setGuideOpen] = useState(false)
 
   const isRunning = snap === null ? false : snap.status === 'running'
   const isAwaiting = snap?.status === 'awaiting_images'
@@ -211,6 +215,15 @@ export default function Home() {
   const terminalStatus = snap?.status === 'completed' || snap?.status === 'failed'
   type SnapStatus = 'running' | 'awaiting_images' | 'completed' | 'failed' | null
   const notifRef = useRef<SnapStatus | null>(null)
+
+  // Show the 3-step new-user guide unless this browser dismissed it before.
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(ONBOARDING_KEY) !== '1') setGuideOpen(true)
+    } catch {
+      setGuideOpen(true) // private mode etc. — default to showing the guide
+    }
+  }, [])
 
   // 1s clock while a run is active or paused at the Flow handoff (drives the
   // elapsed timer — honest about total wall-clock including your Flow work).
@@ -417,6 +430,24 @@ export default function Home() {
               </li>
             ))}
           </ol>
+          {!runId && !guideOpen && (
+            <button
+              type="button"
+              onClick={() => {
+                // Explicit re-open also forgets the dismissal, so a page
+                // reload keeps the guide visible until it is hidden again.
+                try {
+                  window.localStorage.removeItem(ONBOARDING_KEY)
+                } catch {
+                  /* private mode — session-only either way */
+                }
+                setGuideOpen(true)
+              }}
+              className="mt-3 text-[11px] font-medium text-amber-400/80 underline-offset-2 transition-colors hover:text-amber-300 hover:underline"
+            >
+              New here? Show the 3-step guide
+            </button>
+          )}
         </motion.section>
 
         <div className="grid gap-6 lg:grid-cols-2">
@@ -424,6 +455,20 @@ export default function Home() {
           {/* min-w-0: grid items default to min-width:auto — without this, the
               field-sizing-content textarea's intrinsic width blows out mobile. */}
           <div className="min-w-0 space-y-6">
+            {/* New-user onboarding — the app explains itself (see component) */}
+            {!runId && guideOpen && (
+              <OnboardingGuide
+                transcript={transcript}
+                onDismiss={() => {
+                  try {
+                    window.localStorage.setItem(ONBOARDING_KEY, '1')
+                  } catch {
+                    /* private mode — hide for this session only */
+                  }
+                  setGuideOpen(false)
+                }}
+              />
+            )}
             {/* Script card */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -1084,6 +1129,204 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  )
+}
+
+// ─── New-user onboarding — the self-explaining 3-step guide ───────────────────
+//
+// "Complete autopilot" is only an honest pitch if the app explains ITSELF: a
+// brand-new user should never need a human walkthrough. This card is the whole
+// product in 3 steps with LIVE status lights:
+//   1. Paste your script        — turns green at ≥ MIN_CHARS.
+//   2. Sign in to Google once   — shows the REAL Flow Bridge connection + login
+//                                 state, polled live. Explains the one-time
+//                                 sign-in that happens during the first run.
+//   3. Walk away                — the promise the pipeline keeps.
+// Dismissal is remembered in localStorage; the hero link re-opens it.
+
+interface OnboardingGuideProps {
+  transcript: string
+  onDismiss: () => void
+}
+
+function OnboardingGuide({ transcript, onDismiss }: OnboardingGuideProps) {
+  const [bridge, setBridge] = useState<BridgeStatusClient | null>(null)
+
+  // Light bridge health poll (5s) — only while this card is mounted.
+  useEffect(() => {
+    let alive = true
+    const tick = async () => {
+      try {
+        const res = await fetch('/api/flow-bridge/status')
+        if (alive) setBridge((await res.json()) as BridgeStatusClient)
+      } catch {
+        /* offline — the chip below covers it */
+      }
+    }
+    void tick()
+    const id = setInterval(tick, 5000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [])
+
+  const scriptReady = transcript.trim().length >= MIN_CHARS
+  const bridgeOffline = !bridge || bridge.offline === true || bridge.ok !== true
+  const simMode = !bridgeOffline && bridge?.mode === 'simulation'
+  const loginReady = !bridgeOffline && (simMode || bridge?.loginState === 'ready')
+  const needsLogin = !bridgeOffline && !simMode && bridge?.loginState === 'needs-login'
+
+  const loginChip = bridgeOffline
+    ? 'Bridge offline — manual fallback'
+    : simMode
+      ? 'Simulation — no login needed'
+      : loginReady
+        ? 'Google signed in'
+        : needsLogin
+          ? 'Sign-in needed (once)'
+          : 'Checked during first run'
+
+  const step2Body = bridgeOffline
+    ? 'The Flow Bridge service is not connected right now. Your run will pause at the image stage and switch to the manual handoff (copy prompts → upload images) — everything else stays automatic.'
+    : simMode
+      ? 'Simulation mode is ON: the bridge fills every image slot with clearly-labelled placeholder frames, so you can test the entire pipeline without any Google account.'
+      : 'About 2 minutes after you press Start, a "Flow Bridge" panel opens with the REAL Google Flow page inside it. Click that page and sign in with your Google account — ONE time only. The bridge remembers you for every future run.'
+
+  const allSet = scriptReady && loginReady
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+    >
+      <Card
+        className="border-emerald-500/25 bg-emerald-500/[0.04] text-zinc-100 backdrop-blur-sm"
+        aria-label="New user guide — 3 steps"
+      >
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Zap className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+              New here? 3 steps — then it&rsquo;s fully automatic
+            </CardTitle>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onDismiss}
+              aria-label="Hide the 3-step guide"
+              className="h-8 w-8 shrink-0 p-0 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+          <CardDescription className="text-xs text-zinc-400">
+            One-time setup. After this, every video is: paste script → one click → finished MP4.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-2">
+          <ol className="space-y-2.5">
+            <li className="flex gap-3 rounded-lg border border-zinc-800/70 bg-zinc-900/50 p-3">
+              <span
+                aria-hidden="true"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-[11px] font-semibold text-zinc-300"
+              >
+                1
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-zinc-100">
+                  Paste your script
+                  <StatusLight done={scriptReady} label={scriptReady ? 'Ready' : 'Waiting for script'} />
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                  Any topic, 50+ characters. Tip: press{' '}
+                  <span className="font-medium text-zinc-200">Load sample</span> below to try it right
+                  now.
+                </p>
+              </div>
+            </li>
+
+            <li className="flex gap-3 rounded-lg border border-zinc-800/70 bg-zinc-900/50 p-3">
+              <span
+                aria-hidden="true"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-[11px] font-semibold text-zinc-300"
+              >
+                2
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-zinc-100">
+                  Sign in to Google — one time
+                  <StatusLight done={loginReady} label={loginChip} />
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-400">{step2Body}</p>
+              </div>
+            </li>
+
+            <li className="flex gap-3 rounded-lg border border-zinc-800/70 bg-zinc-900/50 p-3">
+              <span
+                aria-hidden="true"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-[11px] font-semibold text-zinc-300"
+              >
+                3
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-zinc-100">
+                  Walk away — that&rsquo;s it
+                  <StatusLight done label="Automatic" pulse={false} />
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                  Rewrite, voiceover, Flow images and final video assembly all run by themselves.
+                  Your MP4 appears with a download button at the end.
+                </p>
+              </div>
+            </li>
+          </ol>
+
+          {allSet && (
+            <div
+              role="status"
+              className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300"
+            >
+              <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+              You&rsquo;re all set — press &ldquo;Start Autopilot&rdquo; below. That&rsquo;s your only click.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+/** Small live status pill: green check when done, amber pulse while waiting. */
+function StatusLight({
+  done,
+  label,
+  pulse = true
+}: {
+  done: boolean
+  label: string
+  pulse?: boolean
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+        done
+          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+          : 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+      }`}
+    >
+      {done ? (
+        <Check className="h-3 w-3 shrink-0" aria-hidden="true" />
+      ) : (
+        <span
+          aria-hidden="true"
+          className={`h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400${pulse ? ' animate-pulse' : ''}`}
+        />
+      )}
+      {label}
+    </span>
   )
 }
 
