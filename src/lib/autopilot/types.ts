@@ -1,14 +1,16 @@
 // ── AutoTube Autopilot — shared types ─────────────────────────────────────────
 //
-// The Autopilot is the fully-automated end-to-end pipeline:
+// The Autopilot pipeline (Flow-only image mode):
 //   user script → rewrite → voiceover → Flow-Studio image prompts →
-//   batch image generation → video assembly → finished MP4
+//   [PAUSE: user generates images in Google Flow and uploads them] →
+//   video assembly → finished MP4
 //
-// The user's ONLY job is pasting the script. Every stage below runs
-// server-side inside the orchestrator (src/app/api/autopilot/route.ts) and
-// the browser merely polls the GET snapshot to render live progress.
-
-import type { ProviderName } from '@/lib/image-providers'
+// Google Flow (https://labs.google/fx/tools/flow) has NO public API, so the
+// image stage is a compliant handoff: the autopilot writes every prompt,
+// the user generates the images in Flow with their own account, then
+// batch-uploads them here. Video assembly then resumes automatically.
+// The previous automatic image providers (Pexels / Unsplash / Z.ai) were
+// REMOVED at the user's request — Flow is now the only image source.
 
 /** The five pipeline stages, in execution order. */
 export type AutopilotStageKey = 'rewrite' | 'voiceover' | 'prompts' | 'images' | 'video'
@@ -76,21 +78,16 @@ export interface VoiceoverLive {
 
 export interface ImageSlotLive {
   index: number
-  status: 'pending' | 'processing' | 'waiting' | 'done' | 'error'
-  provider?: ProviderName
-}
-
-export interface ImageBatchLive {
-  index: number
-  total: number
-  completed: number
-  failed: number
-  status: 'pending' | 'active' | 'done'
+  status: 'pending' | 'done' | 'error'
+  /** The narration chunk this slot's image visualizes (Flow handoff proof). */
+  chunkText?: string
+  error?: string
 }
 
 export interface ImagesLive {
   jobId: string | null
-  status: 'idle' | 'styling' | 'prompting' | 'processing' | 'done' | 'error'
+  /** 'awaiting' = prompts written, waiting for the user's Google Flow uploads. */
+  status: 'idle' | 'styling' | 'prompting' | 'awaiting' | 'done' | 'error'
   total: number
   completed: number
   failed: number
@@ -98,14 +95,11 @@ export interface ImagesLive {
   currentLabel: string | null
   promptBatchesTotal: number | null
   promptBatchesDone: number | null
-  batchesTotal: number | null
-  currentBatch: number | null
-  batchCompleted: number | null
-  batchInterlude: boolean
-  batchStates: ImageBatchLive[] | null
   /** The Flow-Prompt-Studio-derived Style DNA steering every image. */
   styleDna: string | null
   slots: ImageSlotLive[]
+  /** Full prompt list — present once prompts are ready (Flow handoff UI). */
+  prompts?: string[]
   error?: string
 }
 
@@ -160,7 +154,8 @@ export interface AutopilotArtifacts {
 
 export interface AutopilotJob {
   id: string
-  status: 'running' | 'completed' | 'failed'
+  /** 'awaiting_images' = paused at the Flow handoff (uploads pending). */
+  status: 'running' | 'awaiting_images' | 'completed' | 'failed'
   createdAt: number
   doneAt?: number
   settings: AutopilotSettings
@@ -193,6 +188,6 @@ export const STAGE_LABELS: Record<AutopilotStageKey, string> = {
   rewrite: 'Rewriting script',
   voiceover: 'Generating voiceover',
   prompts: 'Flow Studio · writing image prompts',
-  images: 'Generating images (batched)',
+  images: 'Google Flow · image handoff',
   video: 'Assembling final video'
 }

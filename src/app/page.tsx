@@ -26,7 +26,11 @@ import {
   Palette,
   Music,
   Settings2,
-  ChevronDown
+  ChevronDown,
+  ExternalLink,
+  ClipboardCopy,
+  Upload,
+  X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -134,7 +138,7 @@ const STAGE_TAGLINES: Record<string, string> = {
   rewrite: 'The script doctor rewrites your transcript into a fresh, original narration script.',
   voiceover: 'A neural voice narrates the rewritten script, split into perfectly timed segments.',
   prompts: 'The Flow Prompt Studio engine designs a Style DNA and writes one image prompt per narration chunk.',
-  images: 'Images are generated batch-wise (junctions of 20) — each anchored to its exact narration chunk.',
+  images: 'Copy the prompts into Google Flow, generate the images with your Flow account, and upload them back — assembly then continues automatically.',
   video: 'FFmpeg assembles clips, captions, music and motion into the finished MP4.'
 }
 
@@ -193,17 +197,19 @@ export default function Home() {
   const [nowTick, setNowTick] = useState(() => Date.now())
 
   const isRunning = snap === null ? false : snap.status === 'running'
-  const busy = starting || isRunning
+  const isAwaiting = snap?.status === 'awaiting_images'
+  const busy = starting || isRunning || isAwaiting
   const terminalStatus = snap?.status === 'completed' || snap?.status === 'failed'
-  type SnapStatus = 'running' | 'completed' | 'failed' | null
+  type SnapStatus = 'running' | 'awaiting_images' | 'completed' | 'failed' | null
   const notifRef = useRef<SnapStatus | null>(null)
 
-  // 1s clock while a run is active (drives the elapsed timer).
+  // 1s clock while a run is active or paused at the Flow handoff (drives the
+  // elapsed timer — honest about total wall-clock including your Flow work).
   useEffect(() => {
-    if (!isRunning) return
+    if (!isRunning && !isAwaiting) return
     const id = setInterval(() => setNowTick(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [isRunning])
+  }, [isRunning, isAwaiting])
 
   // Poll the autopilot snapshot while the run is active.
   useEffect(() => {
@@ -241,7 +247,7 @@ export default function Home() {
     }
   }, [runId, terminalStatus])
 
-  // Terminal-transition toasts (fire exactly once per run).
+  // Terminal/pause-transition toasts (fire exactly once per run).
   useEffect(() => {
     const s = snap?.status ?? null
     if (!s || s === 'running') {
@@ -249,10 +255,21 @@ export default function Home() {
       return
     }
     if (notifRef.current !== s) {
+      const prev = notifRef.current
       notifRef.current = s
-      if (s === 'completed') {
+      if (s === 'awaiting_images') {
         toast({
-          title: 'Video ready 🎬',
+          title: 'Prompts ready',
+          description: `${snap?.live.images.total ?? 0} image prompts are written — open Google Flow, generate the images, and upload them here to continue.`
+        })
+      } else if (s === 'completed' && prev === 'awaiting_images') {
+        toast({
+          title: 'Video ready',
+          description: 'Your Flow images are edited into the finished video — scroll to the player and download it.'
+        })
+      } else if (s === 'completed') {
+        toast({
+          title: 'Video ready',
           description: 'The autopilot finished your video — scroll to the player and download it.'
         })
       } else if (s === 'failed') {
@@ -263,7 +280,7 @@ export default function Home() {
         })
       }
     }
-  }, [snap?.status, snap?.error, toast])
+  }, [snap?.status, snap?.live.images.total, snap?.error, toast])
 
   // ── Derived input stats ──
   const inputWords = useMemo(
@@ -352,7 +369,7 @@ export default function Home() {
               className="border-amber-500/30 bg-amber-500/10 text-amber-400"
             >
               <Zap className="mr-1 h-3 w-3" aria-hidden="true" />
-              Fully automated
+              Google Flow images
             </Badge>
           </div>
         </div>
@@ -375,12 +392,13 @@ export default function Home() {
             Paste a script. <span className="text-amber-400">Get a finished video.</span>
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
-            Your only job is the script. The autopilot agent rewrites it, narrates it, writes
-            image prompts with the Flow&nbsp;Prompt&nbsp;Studio engine, generates the full image
-            batch, and edits everything into a finished MP4 — automatically.
+            Your only job is the script. The autopilot agent rewrites it, narrates it, and writes
+            image prompts with the Flow&nbsp;Prompt&nbsp;Studio engine. Then it hands off to
+            Google&nbsp;Flow — you generate the images there (with your own Flow account) and drop
+            them back here — and the agent edits everything into a finished MP4.
           </p>
           <ol className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-zinc-400" aria-label="Pipeline stages">
-            {['Script', 'Rewrite', 'Voiceover', 'Prompts', 'Images', 'Video'].map((step, i) => (
+            {['Script', 'Rewrite', 'Voiceover', 'Prompts', 'Flow Images', 'Video'].map((step, i) => (
               <li key={step} className="flex items-center gap-1.5">
                 <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1">
                   {step}
@@ -716,12 +734,18 @@ export default function Home() {
                       <Loader2 className="h-5 w-5 animate-spin text-amber-400" aria-hidden="true" />
                       <div className="text-sm">
                         <p className="font-medium text-amber-300">
-                          {starting ? 'Engaging autopilot…' : 'Autopilot is running'}
+                          {starting
+                            ? 'Engaging autopilot…'
+                            : isAwaiting
+                              ? 'Waiting for your Google Flow images'
+                              : 'Autopilot is running'}
                         </p>
                         <p className="text-xs text-amber-200/70">
                           {starting
                             ? 'Creating the pipeline run…'
-                            : `Elapsed ${formatDuration(elapsedSec)} — the agent works on its own; this page updates live.`}
+                            : isAwaiting
+                              ? `Prompts are ready — generate the images in Google Flow and upload them below (elapsed ${formatDuration(elapsedSec)}).`
+                              : `Elapsed ${formatDuration(elapsedSec)} — the agent works on its own; this page updates live.`}
                         </p>
                       </div>
                     </div>
@@ -738,8 +762,8 @@ export default function Home() {
                     </Button>
                   )}
                   <p className="text-center text-[11px] leading-relaxed text-zinc-500">
-                    One click = rewrite → voiceover → Flow-Studio prompts → full image batch →
-                    edited video. Duplicate clicks are ignored while a run is active.
+                    One click = rewrite → voiceover → Flow-Studio prompts → Google Flow image
+                    handoff → edited video. Duplicate clicks are ignored while a run is active.
                   </p>
                 </CardContent>
               </Card>
@@ -775,10 +799,15 @@ export default function Home() {
                           {snap.status === 'running' && (
                             <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
                           )}
+                          {snap.status === 'awaiting_images' && (
+                            <Clock3 className="mr-1 h-3 w-3" aria-hidden="true" />
+                          )}
                           {snap.status === 'completed' && (
                             <Check className="mr-1 h-3 w-3" aria-hidden="true" />
                           )}
-                          {snap.status.toUpperCase()}
+                          {snap.status === 'awaiting_images'
+                            ? 'AWAITING FLOW IMAGES'
+                            : snap.status.toUpperCase()}
                         </Badge>
                         <span className="text-xs tabular-nums text-zinc-500">
                           {formatDuration(elapsedSec)}
@@ -787,7 +816,8 @@ export default function Home() {
                     )}
                   </div>
                   <CardDescription>
-                    The agent runs every stage by itself — watch it work.
+                    Every stage runs by itself — except the Google Flow handoff, where the agent
+                    waits for your images.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -915,17 +945,21 @@ export default function Home() {
                               </div>
                             )}
 
+                            {stage.key === 'images' && stage.status === 'active' && isAwaiting && (
+                              <FlowHandoffPanel
+                                key={`${snap.id}-${snap.live.images.jobId ?? ''}`}
+                                snap={snap}
+                              />
+                            )}
+
                             {stage.key === 'images' &&
-                              (stage.status === 'active' || stage.status === 'done') &&
+                              stage.status === 'done' &&
                               snap.live.images.jobId && (
                                 <ImageBatchPanel
                                   jobId={snap.live.images.jobId}
                                   slots={snap.live.images.slots}
                                   total={snap.live.images.total}
                                   completed={snap.live.images.completed}
-                                  failed={snap.live.images.failed}
-                                  batchStates={snap.live.images.batchStates}
-                                  batchInterlude={snap.live.images.batchInterlude}
                                 />
                               )}
                           </div>
@@ -1000,8 +1034,8 @@ export default function Home() {
               },
               {
                 icon: ImageIcon,
-                title: 'Junction-gated image batches',
-                body: 'Images generate 20 at a time with breathing pauses between junctions — a multi-provider chain with automatic retries keeps the batch alive.'
+                title: 'Google Flow image handoff',
+                body: 'Google Flow (Imagen) is the only image source — Pexels, Unsplash and the bundled AI generator were removed. The agent writes every prompt; you generate in Flow with your own account and drop the images back in.'
               },
               {
                 icon: Clapperboard,
@@ -1011,7 +1045,7 @@ export default function Home() {
               {
                 icon: ShieldCheck,
                 title: 'Zero API keys',
-                body: 'Every AI call runs on the platform’s bundled providers. You never enter a key, and the pipeline never bypasses a quota or rate limit.'
+                body: 'Every AI call runs on the platform’s bundled text models. You never enter a key, and the pipeline never bypasses a quota or rate limit. Google Flow has no API — that’s why the handoff is manual by design.'
               }
             ].map((f) => (
               <Card key={f.title} className="border-zinc-800/60 bg-zinc-900/40">
@@ -1030,77 +1064,46 @@ export default function Home() {
       <footer className="mt-auto border-t border-zinc-800/70 bg-zinc-950">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-center text-xs text-zinc-500 sm:flex-row sm:px-6 sm:text-left">
           <p>
-            AutoTube Studio · Autopilot — script to finished video, fully automated. Generation
-            runs on the platform’s bundled AI providers; no user API keys.
+            AutoTube Studio · Autopilot — script to finished video, with a Google Flow image
+            handoff. Text AI runs on the platform’s bundled models; images come from your
+            Google Flow account. No API keys.
           </p>
-          <p className="text-zinc-600">Runs are kept for 4 hours after finishing.</p>
+          <p className="text-zinc-600">Runs are kept 4 hours after finishing (Flow handoffs 12 hours).</p>
         </div>
       </footer>
     </div>
   )
 }
 
-// ─── Image batch panel (thumbnails grid) ─────────────────────────────────────
+// ─── Image batch panel (uploaded thumbnails grid) ─────────────────────────────
 
 function ImageBatchPanel({
   jobId,
   slots,
   total,
-  completed,
-  failed,
-  batchStates,
-  batchInterlude
+  completed
 }: {
   jobId: string
   slots: ImageSlotLive[]
   total: number
   completed: number
-  failed: number
-  batchStates: AutopilotSnapshot['live']['images']['batchStates']
-  batchInterlude: boolean
 }) {
   const showThumbs = slots.length > 0
   return (
     <div className="mt-2 space-y-2">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-500">
         <span className="tabular-nums">
-          {completed}/{total} done
+          {completed}/{total} images from Google Flow
         </span>
-        {failed > 0 && <span className="text-red-400/80">{failed} failed</span>}
-        {batchInterlude && (
-          <span className="inline-flex items-center gap-1 text-amber-400/80">
-            <Clock3 className="h-3 w-3 animate-pulse" aria-hidden="true" />
-            breathing between junctions
-          </span>
-        )}
       </div>
-      {batchStates && batchStates.length > 1 && (
-        <div className="flex flex-wrap gap-1" aria-label="Batch junction states">
-          {batchStates.map((b) => (
-            <span
-              key={b.index}
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-mono tabular-nums ${
-                b.status === 'done'
-                  ? 'bg-emerald-500/15 text-emerald-400'
-                  : b.status === 'active'
-                    ? 'bg-amber-500/15 text-amber-400'
-                    : 'bg-zinc-800/60 text-zinc-500'
-              }`}
-              title={`Junction ${b.index + 1}: ${b.completed}/${b.total} done, ${b.failed} failed`}
-            >
-              B{b.index + 1}
-            </span>
-          ))}
-        </div>
-      )}
       {showThumbs && (
         <div
           className="grid max-h-96 grid-cols-3 gap-1.5 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-950/70 p-1.5 sm:grid-cols-4 md:grid-cols-6 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-700"
           role="img"
-          aria-label={`Generated frames grid — ${completed} of ${total} complete`}
+          aria-label={`Uploaded Flow frames grid — ${completed} of ${total} complete`}
         >
           {slots.map((slot) => (
-            <ThumbCell key={slot.index} slot={slot} jobId={jobId} />
+            <FlowThumbCell key={slot.index} slot={slot} jobId={jobId} />
           ))}
         </div>
       )}
@@ -1108,13 +1111,13 @@ function ImageBatchPanel({
   )
 }
 
-function ThumbCell({ slot, jobId }: { slot: ImageSlotLive; jobId: string }) {
+function FlowThumbCell({ slot, jobId }: { slot: ImageSlotLive; jobId: string }) {
   if (slot.status === 'done') {
     return (
       <div className="group relative aspect-video overflow-hidden rounded-md border border-zinc-800 bg-zinc-900">
         <img
           src={`/api/image?jobId=${encodeURIComponent(jobId)}&index=${slot.index}`}
-          alt={`Generated frame ${slot.index + 1}`}
+          alt={`Flow frame ${slot.index + 1}`}
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
@@ -1128,22 +1131,446 @@ function ThumbCell({ slot, jobId }: { slot: ImageSlotLive; jobId: string }) {
     return (
       <div
         className="relative flex aspect-video items-center justify-center overflow-hidden rounded-md border border-red-500/30 bg-red-500/5"
-        title="This slot failed — the video will skip it"
+        title={slot.error ?? 'This image could not be processed'}
       >
         <AlertCircle className="h-4 w-4 text-red-400/70" aria-hidden="true" />
       </div>
     )
   }
-  if (slot.status === 'waiting') {
-    return (
-      <div className="relative flex aspect-video animate-pulse items-center justify-center overflow-hidden rounded-md border border-amber-500/30 bg-amber-500/5">
-        <Clock3 className="h-4 w-4 text-amber-400/70" aria-hidden="true" />
-      </div>
-    )
-  }
+  // Pending Flow slot — a calm empty cell (the image comes from the user's
+  // Google Flow session, not from a server-side generator).
   return (
-    <div className="relative flex aspect-video animate-pulse items-center justify-center overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/60">
-      <Loader2 className="h-4 w-4 animate-spin text-zinc-500" aria-hidden="true" />
+    <div
+      className="relative flex aspect-video items-center justify-center overflow-hidden rounded-md border border-dashed border-zinc-800 bg-zinc-900/40"
+      title="Waiting for its Google Flow image"
+    >
+      <span className="font-mono text-[10px] text-zinc-600">#{slot.index + 1}</span>
+    </div>
+  )
+}
+
+// ─── Google Flow handoff panel (the pause UI) ─────────────────────────────────
+
+const FLOW_URL = 'https://labs.google/fx/tools/flow'
+
+/**
+ * The Google Flow handoff panel — rendered while the run is paused in
+ * 'awaiting_images'. Google Flow (labs.google/fx/tools/flow) has no public
+ * API, so this is the compliant 3-step bridge:
+ *   1. copy the prompts (one by one, or all at once / as .txt)
+ *   2. open Google Flow and generate the images with your own account
+ *   3. drag & drop the exported images back here
+ * Then press "Assemble video" and the pipeline resumes automatically.
+ */
+function FlowHandoffPanel({ snap }: { snap: AutopilotSnapshot }) {
+  const { toast } = useToast()
+  const images = snap.live.images
+  const jobId = images.jobId
+  const prompts = images.prompts ?? []
+  const slots = images.slots
+  const completed = images.completed
+  const total = images.total
+
+  const [dragging, setDragging] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [finishing, setFinishing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
+  const [copiedAll, setCopiedAll] = useState(false)
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
+      if (!jobId || files.length === 0 || uploading || finishing) return
+      setUploading(true)
+      setError(null)
+      try {
+        const form = new FormData()
+        form.set('autopilotId', snap.id)
+        for (const f of files) form.append('files', f)
+        const res = await fetch('/api/autopilot/flow-upload', {
+          method: 'POST',
+          body: form
+        })
+        const json = (await res.json()) as {
+          ok?: boolean
+          saved?: number
+          failed?: number
+          errors?: string[]
+          completed?: number
+          total?: number
+          error?: string
+        }
+        if (!res.ok || !json.ok) {
+          throw new Error(json.error || `Upload failed (status ${res.status}).`)
+        }
+        toast({
+          title: `${json.saved ?? 0} image${(json.saved ?? 0) === 1 ? '' : 's'} received`,
+          description: `${json.completed ?? 0}/${json.total ?? '?'} slots filled${
+            json.failed ? ` · ${json.failed} file${json.failed === 1 ? '' : 's'} failed` : ''
+          }`
+        })
+        if (json.errors?.length) {
+          setError(json.errors.join(' · ').slice(0, 300))
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Upload failed.'
+        setError(msg)
+        toast({ variant: 'destructive', title: 'Upload failed', description: msg })
+      } finally {
+        setUploading(false)
+      }
+    },
+    [jobId, snap.id, toast, uploading, finishing]
+  )
+
+  const removeSlot = useCallback(
+    async (slotIndex: number) => {
+      if (uploading || finishing) return
+      try {
+        const res = await fetch('/api/autopilot/flow-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ autopilotId: snap.id, action: 'remove', slotIndex })
+        })
+        const json = (await res.json()) as { ok?: boolean; error?: string }
+        if (!res.ok || !json.ok) throw new Error(json.error || 'Could not remove the image.')
+        toast({
+          title: `Image #${slotIndex + 1} removed`,
+          description: 'The slot is empty again — you can re-upload it.'
+        })
+      } catch (err) {
+        toast({
+          variant: 'destructive',
+          title: 'Remove failed',
+          description: err instanceof Error ? err.message : 'Could not remove the image.'
+        })
+      }
+    },
+    [finishing, uploading, snap.id, toast]
+  )
+
+  const assemble = useCallback(async () => {
+    if (completed < 1 || finishing || uploading) return
+    setFinishing(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/autopilot/flow-finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autopilotId: snap.id })
+      })
+      const json = (await res.json()) as { ok?: boolean; imageCount?: number; error?: string }
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Could not start assembly.')
+      toast({
+        title: 'Assembling your video',
+        description: `${json.imageCount ?? completed} Flow images — the agent is editing the final MP4 now.`
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not start assembly.'
+      setError(msg)
+      toast({ variant: 'destructive', title: 'Assembly failed', description: msg })
+    } finally {
+      setFinishing(false)
+    }
+  }, [completed, finishing, uploading, snap.id, toast])
+
+  const copyPrompt = useCallback(
+    async (text: string, idx: number) => {
+      try {
+        await navigator.clipboard.writeText(text)
+        setCopiedIdx(idx)
+        setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1500)
+      } catch {
+        toast({
+          variant: 'destructive',
+          title: 'Copy failed',
+          description: 'Select the prompt text and copy manually.'
+        })
+      }
+    },
+    [toast]
+  )
+
+  const copyAllPrompts = useCallback(async () => {
+    if (prompts.length === 0) return
+    try {
+      await navigator.clipboard.writeText(prompts.join('\n\n'))
+      setCopiedAll(true)
+      setTimeout(() => setCopiedAll(false), 1800)
+      toast({
+        title: 'All prompts copied',
+        description: `${prompts.length} prompts are on your clipboard.`
+      })
+    } catch {
+      toast({ variant: 'destructive', title: 'Copy failed', description: 'Use the .txt download instead.' })
+    }
+  }, [prompts, toast])
+
+  const downloadPrompts = useCallback(() => {
+    if (prompts.length === 0) return
+    const text = prompts.map((p, i) => `--- Prompt ${i + 1} ---\n${p}`).join('\n\n')
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `flow-prompts-${snap.id.slice(0, 8)}.txt`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }, [prompts, snap.id])
+
+  const emptyCount = total - completed
+
+  return (
+    <div className="mt-3 space-y-3 rounded-lg border border-amber-500/25 bg-amber-500/5 p-3">
+      {/* Header + stats + primary actions */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-amber-300">
+          <ImageIcon className="h-4 w-4" aria-hidden="true" />
+          Google Flow handoff — {completed}/{total} images received
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <Button asChild size="sm" className="h-8 bg-amber-500 text-zinc-950 hover:bg-amber-400">
+            <a href={FLOW_URL} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              Open Google Flow
+            </a>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            onClick={copyAllPrompts}
+            disabled={prompts.length === 0}
+          >
+            {copiedAll ? (
+              <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+            ) : (
+              <ClipboardCopy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {copiedAll ? 'Copied!' : 'Copy all prompts'}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            onClick={downloadPrompts}
+            disabled={prompts.length === 0}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            .txt
+          </Button>
+        </div>
+      </div>
+
+      {/* 3-step instructions */}
+      <ol className="grid gap-1.5 text-[11px] leading-relaxed text-zinc-400 sm:grid-cols-3">
+        <li className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2.5 py-2">
+          <span className="font-semibold text-amber-400/90">1. Copy</span> — copy a prompt
+          (or all of them) below. Each one is anchored to its exact narration chunk.
+        </li>
+        <li className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2.5 py-2">
+          <span className="font-semibold text-amber-400/90">2. Generate</span> — paste it
+          into Google Flow and generate the image with your Flow account (16:9). Download
+          the result.
+        </li>
+        <li className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2.5 py-2">
+          <span className="font-semibold text-amber-400/90">3. Upload</span> — drag &amp; drop
+          the exported images into the box below. Press "Assemble video" when ready.
+        </li>
+      </ol>
+
+      {/* Prompt list */}
+      {prompts.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-500/80">
+            {prompts.length} prompts (slot # = order)
+          </p>
+          <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-950/70 p-1.5 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-700">
+            {prompts.map((p, i) => {
+              const done = slots[i]?.status === 'done'
+              const copied = copiedIdx === i
+              const expanded = expandedIdx === i
+              return (
+                <div
+                  key={i}
+                  className={`group flex items-start gap-2 rounded-md border px-2 py-1.5 ${
+                    done
+                      ? 'border-emerald-500/25 bg-emerald-500/5'
+                      : 'border-zinc-800/70 bg-zinc-900/40'
+                  }`}
+                >
+                  <span
+                    className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] tabular-nums ${
+                      done ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
+                    }`}
+                    title={done ? 'Image received' : 'Waiting for its image'}
+                  >
+                    #{i + 1}
+                  </span>
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left text-[11px] leading-relaxed text-zinc-300"
+                    onClick={() => setExpandedIdx(expanded ? null : i)}
+                    aria-expanded={expanded}
+                    title={slots[i]?.chunkText ?? undefined}
+                  >
+                    <span className={expanded ? '' : 'line-clamp-2'}>{p}</span>
+                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {done && <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-1.5 text-[10px] text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                      onClick={() => copyPrompt(p, i)}
+                      aria-label={`Copy prompt ${i + 1}`}
+                    >
+                      {copied ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+                      ) : (
+                        <ClipboardCopy className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                      <span className="ml-1 hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Dropzone */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload your Google Flow images (drag and drop or click to browse)"
+        onClick={() => !uploading && fileInputRef.current?.click()}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !uploading) {
+            e.preventDefault()
+            fileInputRef.current?.click()
+          }
+        }}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDragging(false)
+          const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+          if (files.length === 0) {
+            setError('No image files were dropped — export images from Google Flow first.')
+            return
+          }
+          void uploadFiles(files)
+        }}
+        className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors ${
+          dragging
+            ? 'border-amber-400 bg-amber-500/10'
+            : 'border-zinc-700 bg-zinc-950/50 hover:border-amber-500/50 hover:bg-amber-500/5'
+        } ${uploading ? 'pointer-events-none opacity-60' : ''}`}
+      >
+        {uploading ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin text-amber-400" aria-hidden="true" />
+            <p className="text-xs font-medium text-amber-300">Receiving your Flow images…</p>
+            <p className="text-[11px] text-zinc-500">
+              Each image is normalized to JPEG before it lands in its slot.
+            </p>
+          </>
+        ) : (
+          <>
+            <Upload className="h-5 w-5 text-amber-400" aria-hidden="true" />
+            <p className="text-xs font-medium text-zinc-300">
+              Drop your Google Flow images here — or click to browse
+            </p>
+            <p className="text-[11px] text-zinc-500">
+              {emptyCount > 0
+                ? `${emptyCount} slot${emptyCount === 1 ? '' : 's'} still empty · files fill slots in filename order`
+                : 'All slots are filled — assemble when ready'}
+            </p>
+          </>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? [])
+            e.target.value = '' // allow re-selecting the same file
+            if (files.length > 0) void uploadFiles(files)
+          }}
+        />
+      </div>
+
+      {error && (
+        <p className="text-[11px] leading-relaxed text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+
+      {/* Uploaded images grid */}
+      {slots.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-500/80">
+            Received images (hover to remove)
+          </p>
+          <div className="grid max-h-72 grid-cols-3 gap-1.5 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-950/70 p-1.5 sm:grid-cols-4 md:grid-cols-6 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-700">
+            {slots.map((slot) => (
+              <div key={slot.index} className="group relative">
+                <FlowThumbCell slot={slot} jobId={jobId ?? ''} />
+                {slot.status === 'done' && (
+                  <button
+                    type="button"
+                    aria-label={`Remove image ${slot.index + 1}`}
+                    onClick={() => removeSlot(slot.index)}
+                    className="absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded bg-red-500/80 text-white shadow group-hover:flex"
+                  >
+                    <X className="h-3 w-3" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Assemble */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800/70 pt-2.5">
+        <p className="text-[11px] leading-relaxed text-zinc-500">
+          {completed < total
+            ? `You can assemble with fewer images — pacing adapts (${completed}/${total} received).`
+            : 'All images received — assemble when ready.'}
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          onClick={assemble}
+          disabled={completed < 1 || uploading || finishing}
+          className="h-9 bg-amber-500 text-zinc-950 hover:bg-amber-400"
+        >
+          {finishing ? (
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <Clapperboard className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+          )}
+          {finishing
+            ? 'Starting assembly…'
+            : `Assemble video · ${completed} image${completed === 1 ? '' : 's'}`}
+        </Button>
+      </div>
     </div>
   )
 }
@@ -1254,6 +1681,6 @@ const STAGE_LABELS_LOCAL: Record<string, string> = {
   rewrite: 'Rewriting script',
   voiceover: 'Generating voiceover',
   prompts: 'Flow Studio · writing image prompts',
-  images: 'Generating images (batched)',
+  images: 'Google Flow · image handoff',
   video: 'Assembling final video'
 }

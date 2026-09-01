@@ -13,21 +13,27 @@ import { randomUUID } from 'crypto'
 import { POST as rewritePOST, GET as rewriteGET } from '@/app/api/rewrite/route'
 import { POST as voiceoverPOST, GET as voiceoverGET } from '@/app/api/voiceover/route'
 import { POST as imagesPOST, GET as imagesGET } from '@/app/api/images/route'
-import { POST as videoPOST, GET as videoGET } from '@/app/api/video/route'
 import {
   STYLE_OPTIONS,
   LIGHTING_OPTIONS,
   COMPOSITION_OPTIONS
 } from '@/lib/flow-studio/types'
+import { type AutopilotSettings, type AutopilotSnapshot } from '@/lib/autopilot/types'
 import {
-  STAGE_LABELS,
-  type AutopilotJob,
-  type AutopilotSettings,
-  type AutopilotSnapshot,
-  type AutopilotStage,
-  type AutopilotStageKey
-} from '@/lib/autopilot/types'
-import type { ProviderName } from '@/lib/image-providers'
+  autopilotJobs,
+  beginStage,
+  callRoute,
+  cleanupExpiredAutopilotJobs,
+  failJob,
+  finishStage,
+  getAutopilotJob,
+  INTERNAL_BASE,
+  jsonGET,
+  jsonPOST,
+  makeStages,
+  updateStage,
+  type AutopilotJobInternal
+} from '@/lib/autopilot/store'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -40,7 +46,6 @@ const MIN_CHARS = 50
 const ALLOWED_VOICES = new Set([
   'en-US-ChristopherNeural',
   'en-US-AndrewNeural',
-  'en-US-GuyNeural',
   'en-US-BrianNeural',
   'en-US-AriaNeural',
   'en-US-MichelleNeural',
@@ -52,115 +57,17 @@ const ALLOWED_SPEEDS = new Set([0.85, 1.0, 1.15, 1.3])
 const ALLOWED_MUSIC = new Set(['none', 'calm', 'ambient', 'upbeat'])
 const ALLOWED_RESOLUTIONS = new Set(['1080p', '4k'])
 
-/** Jobs are kept for 4 hours after completion, then reclaimed. */
-const JOB_TTL_MS = 4 * 60 * 60 * 1000
-
-// Per-stage poll cadence + hard deadlines (generous headroom for the LLM
-// retry-queue worst case and big image batches).
-const POLL = { rewrite: 1000, voiceover: 1200, images: 2000, video: 2000 }
+// Per-stage poll cadence + hard deadlines. Stages 1-3 only — the video stage
+// (and its deadline) live in the store's runVideoStage, resumed after the
+// Flow handoff.
+const POLL = { rewrite: 1000, voiceover: 1200, images: 2000 }
 const DEADLINE = {
   rewrite: 15 * 60 * 1000,
   voiceover: 12 * 60 * 1000,
-  images: 3 * 60 * 60 * 1000, // matches the images route's own 3h TTL
-  video: 2 * 60 * 60 * 1000 // matches the video route's own 2h TTL
-}
-
-const jobs = new Map<string, AutopilotJob>()
-
-function cleanupExpiredJobs(): void {
-  const now = Date.now()
-  for (const [id, job] of jobs) {
-    if (job.status !== 'running' && now - (job.doneAt ?? job.createdAt) > JOB_TTL_MS) {
-      jobs.delete(id)
-    }
-  }
-}
-
-// ── Internal request helpers ─────────────────────────────────────────────────
-
-const INTERNAL_BASE = 'http://autopilot.internal'
-
-function jsonGET(url: string): NextRequest {
-  return new NextRequest(new URL(url), { method: 'GET' })
-}
-
-function jsonPOST(url: string, body: unknown): NextRequest {
-  return new NextRequest(new URL(url), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body)
-  })
-}
-
-async function callRoute(
-  handler: (req: NextRequest) => Promise<NextResponse>,
-  req: NextRequest
-): Promise<{ ok: boolean; status: number; json: Record<string, unknown> }> {
-  const res = await handler(req)
-  let json: Record<string, unknown>
-  try {
-    json = (await res.json()) as Record<string, unknown>
-  } catch {
-    json = {}
-  }
-  return { ok: res.ok, status: res.status, json }
-}
-
-// ── Stage bookkeeping ────────────────────────────────────────────────────────
-
-function makeStages(): AutopilotStage[] {
-  return (Object.keys(STAGE_LABELS) as AutopilotStageKey[]).map((key) => ({
-    key,
-    label: STAGE_LABELS[key],
-    status: 'pending' as const,
-    detail: null,
-    progress: null
-  }))
-}
-
-function stage(job: AutopilotJob, key: AutopilotStageKey): AutopilotStage {
-  return job.stages.find((s) => s.key === key)!
-}
-
-function beginStage(job: AutopilotJob, key: AutopilotStageKey, detail: string): void {
-  const s = stage(job, key)
-  s.status = 'active'
-  s.detail = detail
-  s.progress = null
-  s.startedAt = Date.now()
-}
-
-function updateStage(
-  job: AutopilotJob,
-  key: AutopilotStageKey,
-  detail: string,
-  progress?: number | null
-): void {
-  const s = stage(job, key)
-  if (s.status === 'active') {
-    s.detail = detail
-    if (progress !== undefined) s.progress = progress
-  }
-}
-
-function finishStage(job: AutopilotJob, key: AutopilotStageKey, detail: string): void {
-  const s = stage(job, key)
-  s.status = 'done'
-  s.detail = detail
-  s.progress = 100
-  s.doneAt = Date.now()
-}
-
-function failJob(job: AutopilotJob, key: AutopilotStageKey, message: string): void {
-  const s = stage(job, key)
-  s.status = 'error'
-  s.detail = message
-  s.doneAt = Date.now()
-  job.status = 'failed'
-  job.failedStage = key
-  job.error = message
-  job.doneAt = Date.now()
-  console.error(`[autopilot ${job.id}] FAILED at "${key}": ${message}`)
+  // Prompts only (Style DNA + batched prompt-gen); the actual images come
+  // from the USER's Google Flow session, so there is nothing to wait for
+  // here beyond prompt writing (LLM retry-queue worst case ≈ 8 min).
+  images: 20 * 60 * 1000
 }
 
 // ── Visual direction (Flow Prompt Studio integration) ───────────────────────
@@ -170,7 +77,7 @@ function failJob(job: AutopilotJob, key: AutopilotStageKey, message: string): vo
  * catalogs (style / lighting / composition). This string steers the Style
  * DNA + every batch image prompt inside /api/images — i.e. the SAME
  * structured option catalogs that power the Flow Studio composer now
- * drive the automated pipeline's image generation.
+ * drive the automated pipeline's image prompts.
  */
 export function buildVisualDirection(settings: AutopilotSettings): string {
   const parts: string[] = []
@@ -197,28 +104,25 @@ export function buildVisualDirection(settings: AutopilotSettings): string {
   return parts.join(', ')
 }
 
-// ── The orchestrator ─────────────────────────────────────────────────────────
+// ── The orchestrator (stages 1-3, then the Flow-handoff pause) ───────────────
 
 class StageError extends Error {
-  stage: AutopilotStageKey
-  constructor(stageKey: AutopilotStageKey, message: string) {
+  stage: 'rewrite' | 'voiceover' | 'prompts' | 'images' | 'video'
+  constructor(
+    stage: 'rewrite' | 'voiceover' | 'prompts' | 'images' | 'video',
+    message: string
+  ) {
     super(message)
-    this.stage = stageKey
+    this.stage = stage
     this.name = 'StageError'
   }
 }
 
 interface ImageSlotRow {
   index: number
-  status: 'pending' | 'processing' | 'waiting' | 'done' | 'error'
-  provider?: string
-}
-interface ImageBatchRow {
-  index: number
-  total: number
-  completed: number
-  failed: number
-  status: 'pending' | 'active' | 'done'
+  status: 'pending' | 'done' | 'error'
+  error?: string
+  chunkText?: string
 }
 
 interface RewriteStartData { jobId: string; totalSections: number }
@@ -243,9 +147,8 @@ interface VoiceoverDoneData {
   chunks: { text: string; startMs: number; endMs: number }[]
 }
 interface ImagesStartData { jobId: string; total: number }
-interface VideoStartData { jobId: string }
 
-async function runAutopilot(job: AutopilotJob, transcript: string): Promise<void> {
+async function runAutopilot(job: AutopilotJobInternal, transcript: string): Promise<void> {
   try {
     // ═══ Stage 1 — REWRITE ══════════════════════════════════════════════════
     beginStage(job, 'rewrite', 'Starting the script doctor…')
@@ -423,14 +326,22 @@ async function runAutopilot(job: AutopilotJob, transcript: string): Promise<void
     finishStage(
       job,
       'voiceover',
-      `Narration ready — ${formatDur(voiceover.durationSeconds)} across ${voiceover.chunkCount} segments (${(voiceover.sizeBytes / 1024 / 1024).toFixed(1)} MB).`
+      `Narration ready — ${formatDurLocal(voiceover.durationSeconds)} across ${voiceover.chunkCount} segments (${(voiceover.sizeBytes / 1024 / 1024).toFixed(1)} MB).`
     )
 
-    // ═══ Stage 3 + 4 — FLOW STUDIO PROMPTS + BATCH IMAGES ═══════════════════
-    // One image job covers both UI stages:
+    // ═══ Stage 3 + 4 — FLOW STUDIO PROMPTS → GOOGLE FLOW HANDOFF ═══════════
+    //
+    // One image job covers the prompt-writing UI stage:
     //   'styling'/'prompting' → stage 3 active (Flow Studio engine writes the
     //                            Style DNA + per-chunk prompts, batched 20/20)
-    //   'processing'          → stage 4 active (junction-gated image batches)
+    //   'awaiting'            → stage 3 done, stage 4 active. The pipeline
+    //                            PAUSES: the user generates the images in
+    //                            Google Flow (labs.google/fx/tools/flow — no
+    //                            public API exists, this handoff is the only
+    //                            compliant path) and uploads them via
+    //                            POST /api/autopilot/flow-upload. Video
+    //                            assembly resumes via
+    //                            POST /api/autopilot/flow-finish.
     beginStage(
       job,
       'prompts',
@@ -444,7 +355,7 @@ async function runAutopilot(job: AutopilotJob, transcript: string): Promise<void
         visualDirection
       })
     )
-    const imgStartData = imgStart.json as ImagesStartData | undefined
+    const imgStartData = imgStart.json as unknown as ImagesStartData | undefined
     if (!imgStart.ok || !imgStartData?.jobId) {
       throw new StageError(
         'prompts',
@@ -455,16 +366,11 @@ async function runAutopilot(job: AutopilotJob, transcript: string): Promise<void
     job.live.images.jobId = imgStartData.jobId
     job.artifacts.imageJobId = imgStartData.jobId
 
-    const imagesDone = await new Promise<{
-      total: number
-      completed: number
-      failed: number
-      prompts: string[]
-    }>((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const deadline = Date.now() + DEADLINE.images
       const tick = async (): Promise<void> => {
         if (Date.now() > deadline) {
-          reject(new StageError('images', 'The image generation stage timed out.'))
+          reject(new StageError('prompts', 'The prompt-writing stage timed out.'))
           return
         }
         const poll = await callRoute(
@@ -474,7 +380,7 @@ async function runAutopilot(job: AutopilotJob, transcript: string): Promise<void
         const data = poll.json as
           | {
               jobId: string
-              status: 'styling' | 'prompting' | 'processing' | 'done' | 'error'
+              status: 'styling' | 'prompting' | 'awaiting' | 'done' | 'error'
               total: number
               completed: number
               waiting: number
@@ -484,11 +390,6 @@ async function runAutopilot(job: AutopilotJob, transcript: string): Promise<void
               promptBatchesTotal: number | null
               promptBatchesDone: number | null
               styleDna: string | null
-              batchesTotal: number | null
-              currentBatch: number | null
-              batchCompleted: number | null
-              batchInterlude: boolean
-              batchStates: ImageBatchRow[] | null
               slots: ImageSlotRow[]
               prompts: string[]
               error: string | null
@@ -498,7 +399,7 @@ async function runAutopilot(job: AutopilotJob, transcript: string): Promise<void
         if (!poll.ok || !data) {
           reject(
             new StageError(
-              'images',
+              'prompts',
               (poll.json.error as string) || 'Lost track of the image job.'
             )
           )
@@ -514,26 +415,21 @@ async function runAutopilot(job: AutopilotJob, transcript: string): Promise<void
         job.live.images.currentLabel = data.currentLabel
         job.live.images.promptBatchesTotal = data.promptBatchesTotal
         job.live.images.promptBatchesDone = data.promptBatchesDone
-        job.live.images.batchesTotal = data.batchesTotal
-        job.live.images.currentBatch = data.currentBatch
-        job.live.images.batchCompleted = data.batchCompleted
-        job.live.images.batchInterlude = data.batchInterlude
-        job.live.images.batchStates = data.batchStates ?? null
         job.live.images.styleDna = data.styleDna
         job.live.images.slots = data.slots.map((s) => ({
           index: s.index,
           status: s.status,
-          provider: s.provider as ProviderName | undefined
+          chunkText: s.chunkText,
+          error: s.error
         }))
         job.artifacts.styleDna = data.styleDna ?? undefined
 
         if (data.status === 'error') {
-          job.live.images.error = data.error ?? 'Image generation failed.'
-          reject(new StageError('images', job.live.images.error))
+          job.live.images.error = data.error ?? 'Image job failed.'
+          reject(new StageError('prompts', job.live.images.error))
           return
         }
 
-        // Map the image job's internal phases onto UI stages 3/4.
         if (data.status === 'styling') {
           updateStage(
             job,
@@ -551,241 +447,64 @@ async function runAutopilot(job: AutopilotJob, transcript: string): Promise<void
             `Writing image prompts — batch ${Math.min(done + 1, total || 1)}/${total || '?'} (20 chunks per batch)`,
             total > 0 ? Math.round((done / total) * 100) : null
           )
-        } else {
-          // First time we reach 'processing'/'done' → prompts stage complete.
-          if (stage(job, 'prompts').status === 'active') {
-            if (data.prompts?.length) {
-              job.artifacts.promptsSample = data.prompts.slice(0, 3)
-            }
-            finishStage(
-              job,
-              'prompts',
-              `${data.total} Flow-Studio prompts ready — every image anchored to its exact narration chunk.`
-            )
-            beginStage(job, 'images', 'Starting batched image generation…')
+        } else if (data.status === 'awaiting' || data.status === 'done') {
+          // Prompts are ready → finish stage 3, pause stage 4 at the handoff.
+          if (data.prompts?.length) {
+            job.artifacts.promptsSample = data.prompts.slice(0, 3)
+            job.live.images.prompts = data.prompts
           }
-          if (data.status === 'processing') {
-            const junction =
-              data.batchesTotal && data.batchesTotal > 1
-                ? ` · junction ${data.currentBatch ?? '?'}/${data.batchesTotal}${data.batchInterlude ? ' (breathing)' : ''}`
-                : ''
-            updateStage(
-              job,
-              'images',
-              `${data.currentLabel ?? `Generating image ${data.completed + 1}/${data.total}`}${junction}`,
-              data.progress
-            )
-          }
-        }
+          finishStage(
+            job,
+            'prompts',
+            `${data.total} Flow-Studio prompts ready — every image anchored to its exact narration chunk.`
+          )
+          beginStage(
+            job,
+            'images',
+            `Waiting for your Google Flow images — ${data.total} prompts are ready to copy.`
+          )
+          job.live.images.currentLabel = 'Prompts ready — generate images in Google Flow, then upload them here'
 
-        if (data.status === 'done') {
-          if (stage(job, 'images').status === 'active') {
-            finishStage(
-              job,
-              'images',
-              `${data.completed}/${data.total} images generated${data.failed > 0 ? ` · ${data.failed} failed (video will skip those)` : ''}.`
-            )
+          // Store the resume context (server-side only) and pause the run.
+          job.resume = {
+            audioBase64: voiceover.audioBase64,
+            mimeType: voiceover.mimeType,
+            audioDuration: voiceover.durationSeconds,
+            script: rewritten.rewritten,
+            imageJobId: imgStartData.jobId
           }
-          resolve({
-            total: data.total,
-            completed: data.completed,
-            failed: data.failed,
-            prompts: data.prompts ?? []
-          })
+          job.status = 'awaiting_images'
+          job.artifacts.imageCount = 0
+          console.log(
+            `[autopilot ${job.id}] AWAITING FLOW IMAGES — ${data.total} prompts ready (image job ${imgStartData.jobId}); run paused until uploads finish`
+          )
+          resolve()
           return
         }
+
         setTimeout(tick, POLL.images)
       }
       void tick()
     })
-
-    job.artifacts.imageCount = imagesDone.completed
-    job.artifacts.imageFailed = imagesDone.failed
-
-    if (imagesDone.completed < 1) {
-      throw new StageError(
-        'images',
-        'No images could be generated (all slots failed). The video cannot be assembled without frames — please try again.'
-      )
-    }
-
-    // ═══ Stage 5 — VIDEO ASSEMBLY ═══════════════════════════════════════════
-    beginStage(job, 'video', 'Preparing clips, captions and music…')
-    const videoStart = await callRoute(
-      videoPOST,
-      jsonPOST(`${INTERNAL_BASE}/api/video`, {
-        imageJobId: imgStartData.jobId,
-        imageCount: imagesDone.completed,
-        audioBase64: voiceover.audioBase64,
-        audioDuration: voiceover.durationSeconds,
-        mimeType: voiceover.mimeType,
-        script: rewritten.rewritten,
-        captionsEnabled: job.settings.captions,
-        transitionsEnabled: job.settings.transitions,
-        titleCardEnabled: job.settings.titleCard,
-        textHighlightsEnabled: job.settings.highlights,
-        outroEnabled: job.settings.outro,
-        musicSource: job.settings.music === 'none' ? 'none' : 'library',
-        musicTrack: job.settings.music === 'none' ? undefined : job.settings.music,
-        resolution: job.settings.resolution
-      })
-    )
-    const videoStartData = videoStart.json as VideoStartData | undefined
-    if (!videoStart.ok || !videoStartData?.jobId) {
-      throw new StageError(
-        'video',
-        (videoStart.json.error as string) ||
-          `The video service refused the request (status ${videoStart.status}).`
-      )
-    }
-    job.live.video.jobId = videoStartData.jobId
-
-    const videoDone = await new Promise<{
-      videoDuration?: number
-      fileSize?: number
-      videoWidth?: number
-      videoHeight?: number
-      titleCardText?: string
-      outroCtaText?: string
-      kenBurnsApplied?: boolean
-      musicLabel?: string
-      captionsApplied?: boolean
-      variablePacingApplied?: boolean
-      transitionsApplied?: boolean
-      titleCardApplied?: boolean
-      textHighlightsApplied?: boolean
-      textHighlightsCount?: number
-      outroApplied?: boolean
-      resolution?: string
-    }>((resolve, reject) => {
-      const deadline = Date.now() + DEADLINE.video
-      const tick = async (): Promise<void> => {
-        if (Date.now() > deadline) {
-          reject(new StageError('video', 'The video assembly stage timed out.'))
-          return
-        }
-        const poll = await callRoute(
-          videoGET,
-          jsonGET(`${INTERNAL_BASE}/api/video?jobId=${encodeURIComponent(videoStartData.jobId)}`)
-        )
-        const data = poll.json as
-          | {
-              status: 'processing' | 'done' | 'error'
-              stage: string
-              progress: number
-              etaSeconds?: number
-              error?: string
-              videoDuration?: number
-              fileSize?: number
-              videoWidth?: number
-              videoHeight?: number
-              titleCardText?: string
-              outroCtaText?: string
-              kenBurnsApplied?: boolean
-              musicLabel?: string
-              captionsApplied?: boolean
-              variablePacingApplied?: boolean
-              transitionsApplied?: boolean
-              titleCardApplied?: boolean
-              textHighlightsApplied?: boolean
-              textHighlightsCount?: number
-              outroApplied?: boolean
-              resolution?: string
-            }
-          | undefined
-
-        if (!poll.ok || !data) {
-          reject(
-            new StageError(
-              'video',
-              (poll.json.error as string) || 'Lost track of the video job.'
-            )
-          )
-          return
-        }
-
-        job.live.video.status = data.status
-        job.live.video.stage = data.stage
-        job.live.video.progress = data.progress
-        job.live.video.etaSeconds = data.etaSeconds
-        job.live.video.videoDuration = data.videoDuration
-        job.live.video.fileSize = data.fileSize
-        job.live.video.videoWidth = data.videoWidth
-        job.live.video.videoHeight = data.videoHeight
-        job.live.video.titleCardText = data.titleCardText
-        job.live.video.outroCtaText = data.outroCtaText
-
-        if (data.status === 'error') {
-          job.live.video.error = data.error ?? 'Video assembly failed.'
-          reject(new StageError('video', job.live.video.error))
-          return
-        }
-
-        if (data.status === 'processing') {
-          const eta =
-            typeof data.etaSeconds === 'number' && data.etaSeconds > 0
-              ? ` · ~${formatEta(data.etaSeconds)} left`
-              : ''
-          updateStage(job, 'video', `${data.stage} — ${data.progress}%${eta}`, data.progress)
-          setTimeout(tick, POLL.video)
-        } else {
-          resolve(data)
-        }
-      }
-      void tick()
-    })
-
-    // ═══ COMPLETED ══════════════════════════════════════════════════════════
-    const features: string[] = []
-    if (videoDone.kenBurnsApplied) features.push('Ken Burns motion')
-    if (videoDone.captionsApplied) features.push('Burn-in captions')
-    if (videoDone.variablePacingApplied) features.push('Variable pacing')
-    if (videoDone.transitionsApplied) features.push('Smart transitions')
-    if (videoDone.titleCardApplied) features.push('Title card')
-    if (videoDone.textHighlightsApplied) {
-      features.push(`Text highlights ×${videoDone.textHighlightsCount ?? '?'}`)
-    }
-    if (videoDone.outroApplied) features.push('Outro card')
-    if (videoDone.musicLabel) features.push(`${videoDone.musicLabel} music`)
-
-    job.artifacts.video = {
-      jobId: videoStartData.jobId,
-      fileUrl: `/api/video/file?jobId=${encodeURIComponent(videoStartData.jobId)}`,
-      downloadUrl: `/api/video/download?jobId=${encodeURIComponent(videoStartData.jobId)}`,
-      videoDuration: videoDone.videoDuration,
-      fileSize: videoDone.fileSize,
-      videoWidth: videoDone.videoWidth,
-      videoHeight: videoDone.videoHeight,
-      titleCardText: videoDone.titleCardText,
-      outroCtaText: videoDone.outroCtaText,
-      featuresApplied: features
-    }
-    finishStage(
-      job,
-      'video',
-      `Finished video ready — ${formatDur(videoDone.videoDuration ?? voiceover.durationSeconds)}${videoDone.videoWidth ? ` · ${videoDone.videoWidth}×${videoDone.videoHeight}` : ''}${videoDone.fileSize ? ` · ${(videoDone.fileSize / 1024 / 1024).toFixed(1)} MB` : ''}.`
-    )
-    job.status = 'completed'
-    job.doneAt = Date.now()
-    console.log(
-      `[autopilot ${job.id}] COMPLETED in ${Math.round((job.doneAt - job.createdAt) / 1000)}s — ${imagesDone.completed} images, video job ${videoStartData.jobId}`
-    )
+    // runAutopilot ENDS here in the happy path — stage 5 runs later, resumed
+    // by POST /api/autopilot/flow-finish (→ runVideoStage in the store).
   } catch (err) {
     if (err instanceof StageError) {
       failJob(job, err.stage, err.message)
     } else {
-      const fallbackKey: AutopilotStageKey =
-        stage(job, 'video').status === 'active'
-          ? 'video'
-          : stage(job, 'images').status === 'active'
-            ? 'images'
-            : 'prompts'
+      const fallbackKey: 'images' | 'prompts' =
+        beginFallbackKey(job)
       failJob(job, fallbackKey, err instanceof Error ? err.message : String(err))
     }
   }
 }
 
-function formatDur(totalSeconds?: number): string {
+function beginFallbackKey(job: AutopilotJobInternal): 'images' | 'prompts' {
+  const images = job.stages.find((s) => s.key === 'images')
+  return images && images.status === 'active' ? 'images' : 'prompts'
+}
+
+function formatDurLocal(totalSeconds?: number): string {
   if (!totalSeconds || !Number.isFinite(totalSeconds)) return '—'
   const secs = Math.max(0, Math.round(totalSeconds))
   const m = Math.floor(secs / 60)
@@ -793,15 +512,10 @@ function formatDur(totalSeconds?: number): string {
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`
 }
 
-function formatEta(seconds: number): string {
-  if (seconds >= 90) return `${Math.round(seconds / 60)} min`
-  return `${Math.round(seconds)}s`
-}
-
 // ── POST: start an autopilot run ─────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  cleanupExpiredJobs()
+  cleanupExpiredAutopilotJobs()
 
   let body: {
     transcript?: string
@@ -890,11 +604,16 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Guard: one active autopilot at a time (duplicate protection) ──
-  for (const existing of jobs.values()) {
-    if (existing.status === 'running') {
+  // An awaiting-Images run ALSO blocks new starts: its resume context (the
+  // voiceover audio) only lives in memory and must not be orphaned.
+  for (const existing of autopilotJobs.values()) {
+    if (existing.status === 'running' || existing.status === 'awaiting_images') {
       return NextResponse.json(
         {
-          error: 'An autopilot run is already in progress — wait for it to finish before starting another.',
+          error:
+            existing.status === 'awaiting_images'
+              ? 'An autopilot run is paused at the Google Flow handoff — finish (or let expire) its image uploads before starting another.'
+              : 'An autopilot run is already in progress — wait for it to finish before starting another.',
           existingId: existing.id
         },
         { status: 409 }
@@ -902,7 +621,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const job: AutopilotJob = {
+  const job: AutopilotJobInternal = {
     id: randomUUID(),
     status: 'running',
     createdAt: Date.now(),
@@ -925,11 +644,6 @@ export async function POST(req: NextRequest) {
         currentLabel: null,
         promptBatchesTotal: null,
         promptBatchesDone: null,
-        batchesTotal: null,
-        currentBatch: null,
-        batchCompleted: null,
-        batchInterlude: false,
-        batchStates: null,
         styleDna: null,
         slots: []
       },
@@ -942,13 +656,13 @@ export async function POST(req: NextRequest) {
     },
     artifacts: {}
   }
-  jobs.set(job.id, job)
+  autopilotJobs.set(job.id, job)
 
   // Fire-and-forget — the browser polls GET /api/autopilot?id=
   void runAutopilot(job, transcript)
 
   console.log(
-    `[autopilot ${job.id}] STARTED — ${transcript.length} chars, voice=${settings.voice}, style=${settings.visualStyle}/${settings.lighting}/${settings.composition}, music=${settings.music}`
+    `[autopilot ${job.id}] STARTED (Flow mode) — ${transcript.length} chars, voice=${settings.voice}, style=${settings.visualStyle}/${settings.lighting}/${settings.composition}, music=${settings.music}`
   )
 
   return NextResponse.json({ autopilotId: job.id })
@@ -957,17 +671,18 @@ export async function POST(req: NextRequest) {
 // ── GET: poll an autopilot run ───────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  cleanupExpiredJobs()
+  cleanupExpiredAutopilotJobs()
 
   const id = req.nextUrl.searchParams.get('id')
   if (!id) {
     return NextResponse.json({ error: 'Missing id query param.' }, { status: 400 })
   }
-  const job = jobs.get(id)
+  const job = getAutopilotJob(id)
   if (!job) {
     return NextResponse.json(
       {
-        error: 'Autopilot run not found (it may have expired — runs are kept 4 hours after finishing).'
+        error:
+          'Autopilot run not found (it may have expired — finished runs are kept 4 hours, Flow-handoff runs 12 hours).'
       },
       { status: 404 }
     )
