@@ -282,7 +282,7 @@ export default function Home() {
       if (s === 'awaiting_images') {
         toast({
           title: 'Prompts ready',
-          description: `${snap?.live.images.total ?? 0} image prompts are written — the Flow Bridge starts generating them automatically when connected + logged in (otherwise use the manual handoff).`
+          description: `${snap?.live.images.total ?? 0} image prompts are written — the Flow Bridge is generating them from your connected Google Flow now (manual handoff available as fallback).`
         })
       } else if (s === 'completed' && prev === 'awaiting_images') {
         toast({
@@ -469,6 +469,9 @@ export default function Home() {
                 }}
               />
             )}
+            {/* Connect-first: open & sign in to the REAL Google Flow BEFORE
+                starting — confirmation banner appears when connected. */}
+            {!runId && <FlowConnectCard />}
             {/* Script card */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -820,7 +823,8 @@ export default function Home() {
                   )}
                   <p className="text-center text-[11px] leading-relaxed text-zinc-500">
                     One click = rewrite → voiceover → Flow-Studio prompts → Google Flow image
-                    handoff → edited video. Duplicate clicks are ignored while a run is active.
+                    generation → edited video. Multiple people can run this at the same time —
+                    every user gets their own pipeline.
                   </p>
                 </CardContent>
               </Card>
@@ -1190,8 +1194,8 @@ function OnboardingGuide({ transcript, onDismiss }: OnboardingGuideProps) {
   const step2Body = bridgeOffline
     ? 'The Flow Bridge service is not connected right now. Your run will pause at the image stage and switch to the manual handoff (copy prompts → upload images) — everything else stays automatic.'
     : simMode
-      ? 'Simulation mode is ON: the bridge fills every image slot with clearly-labelled placeholder frames, so you can test the entire pipeline without any Google account.'
-      : 'About 2 minutes after you press Start, a "Flow Bridge" panel opens with the REAL Google Flow page inside it. Click that page and sign in with your Google account — ONE time only. The bridge remembers you for every future run.'
+      ? 'Simulation mode is ON: runs would use placeholder frames, NOT real Flow images. Turn it off (run panel → “testing tools”) before making a real video.'
+      : 'Use the “Google Flow Connect” card below: press “Open & sign in”, then log into your Google account in the live view — ONE time only. The bridge remembers you for every future run. When it shows “connected”, every image will come from the real Flow.'
 
   const allSet = scriptReady && loginReady
 
@@ -1327,6 +1331,292 @@ function StatusLight({
       )}
       {label}
     </span>
+  )
+}
+
+// ─── Google Flow Connect card — connect BEFORE starting the autopilot ─────────
+//
+// The owner's requested flow, made literal: at the very start the system asks
+// the user to open the real Google Flow and connect; the moment the bridge
+// reports "logged in", the user gets the explicit confirmation that images
+// will be generated & downloaded from the real Flow — and only then presses
+// "Start Full Autopilot". Shown only while no run is active. During a run the
+// FlowBridgePanel (pause UI) takes over with the same live-view controls.
+
+function FlowConnectCard() {
+  const { toast } = useToast()
+  const [bridge, setBridge] = useState<BridgeStatusClient | null>(null)
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState<string | null>(null)
+  const [frameBad, setFrameBad] = useState(false)
+  const [frameTs, setFrameTs] = useState(0)
+
+  // Bridge health polling (3s)
+  useEffect(() => {
+    let alive = true
+    const tick = async () => {
+      try {
+        const res = await fetch('/api/flow-bridge/status')
+        if (alive) setBridge((await res.json()) as BridgeStatusClient)
+      } catch {
+        /* offline — covered below */
+      }
+      if (alive) setTimeout(tick, 3000)
+    }
+    void tick()
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const offline = !bridge || bridge.offline === true || bridge.ok !== true
+  const mode: 'real' | 'simulation' = bridge?.mode ?? 'real'
+  const simOn = !offline && mode === 'simulation'
+  const connected = !offline && !simOn && bridge?.loginState === 'ready'
+  const needsLogin = !offline && !simOn && bridge?.loginState === 'needs-login'
+  const browserRunning = !!bridge?.browserRunning && !offline
+
+  // Live-view frame refresh (2.2s) while the browser is up and login isn't
+  // confirmed yet — once connected the live view collapses away.
+  useEffect(() => {
+    if (!browserRunning || connected) return
+    setFrameBad(false)
+    const iv = setInterval(() => setFrameTs(Date.now()), 2200)
+    return () => clearInterval(iv)
+  }, [browserRunning, connected])
+
+  const control = useCallback(
+    async (action: string, payload: Record<string, unknown> = {}) => {
+      setBusy(action)
+      try {
+        const res = await fetch('/api/flow-bridge/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, ...payload })
+        })
+        const json = (await res.json()) as { ok?: boolean; error?: string }
+        if (!res.ok || !json.ok) throw new Error(json.error || 'The bridge refused the action.')
+        return true
+      } catch (err) {
+        toast({
+          variant: 'destructive',
+          title: 'Bridge action failed',
+          description: err instanceof Error ? err.message : 'Action failed.'
+        })
+        return false
+      } finally {
+        setBusy(null)
+      }
+    },
+    [toast]
+  )
+
+  const onFrameClick = (e: React.MouseEvent<HTMLImageElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = (e.clientX - rect.left) / rect.width
+    const y = (e.clientY - rect.top) / rect.height
+    void control('click', { x, y })
+  }
+
+  const sendTyped = () => {
+    const text = typed.trim()
+    if (!text) return
+    void control('type', { text })
+    setTyped('')
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.05 }}
+    >
+      <Card className="border-zinc-800/60 bg-zinc-900/40 text-zinc-100 backdrop-blur-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bot className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+            Google Flow Connect
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                connected
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                  : simOn
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                    : 'border-zinc-700 bg-zinc-900 text-zinc-400'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`h-1.5 w-1.5 rounded-full ${
+                  connected ? 'bg-emerald-400' : simOn ? 'bg-amber-400' : offline ? 'bg-zinc-500' : 'animate-pulse bg-amber-400'
+                }`}
+              />
+              {connected ? 'connected' : simOn ? 'test mode' : offline ? 'bridge offline' : needsLogin ? 'sign-in needed' : 'checking…'}
+            </span>
+          </CardTitle>
+          <CardDescription className="text-xs text-zinc-400">
+            Connect the real Google Flow once — after this, every image in every video is generated
+            inside your own Flow account automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-2">
+          {connected ? (
+            <div
+              role="status"
+              className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-xs leading-relaxed text-emerald-300"
+            >
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p>
+                <span className="font-semibold">Google Flow connected.</span> When you press{' '}
+                <span className="font-semibold">Start Full Autopilot</span>, every image will be
+                generated and downloaded from the real Google&nbsp;Flow — no other image source
+                exists in this system. Video assembly starts by itself when the last image lands.
+              </p>
+            </div>
+          ) : simOn ? (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-300">
+              <FlaskConical className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p>
+                <span className="font-semibold">Simulation mode is ON.</span> Runs would use
+                clearly-labelled placeholder frames, NOT real Flow images. Turn it off in the
+                run panel&rsquo;s &ldquo;testing tools&rdquo; before starting a real video.
+              </p>
+            </div>
+          ) : offline ? (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2.5 text-xs leading-relaxed text-zinc-400">
+              <p>
+                <span className="font-semibold text-zinc-300">Flow Bridge is offline.</span> The
+                autopilot can still start — it will pause at the image stage with the manual
+                handoff (copy prompts → generate in Flow → upload). Start the bridge on this
+                machine with{' '}
+                <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-[10px] text-amber-300">
+                  bun run dev
+                </code>{' '}
+                inside{' '}
+                <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-[10px] text-amber-300">
+                  mini-services/flow-bridge
+                </code>
+                .
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs leading-relaxed text-zinc-400">
+                Press <span className="font-semibold text-zinc-200">Open &amp; sign in</span> — the
+                real Google&nbsp;Flow opens in the bridge browser below. Click the page to focus
+                fields and type your Google account. One time only; the bridge remembers you.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 bg-emerald-500 text-zinc-950 hover:bg-emerald-400"
+                  onClick={() => void control('login')}
+                  disabled={busy === 'login'}
+                >
+                  {busy === 'login' ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <LogIn className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  Open &amp; sign in
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  onClick={() => void control('open-app')}
+                  disabled={busy === 'open-app'}
+                >
+                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                  Flow app
+                </Button>
+              </div>
+              <p className="text-[10px] leading-relaxed text-zinc-600">
+                Honest note: Google sometimes blocks sign-ins from automated browsers — if that
+                happens, run the bridge on your own machine instead.
+              </p>
+            </>
+          )}
+
+          {/* Live view for the sign-in (collapses away once connected) */}
+          {browserRunning && !connected && !simOn && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                <span className="flex items-center gap-1">
+                  <Monitor className="h-3 w-3" aria-hidden="true" />
+                  live Flow tab — click to control
+                </span>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 normal-case text-zinc-500 hover:text-zinc-300"
+                  onClick={() => void control('close-browser')}
+                  title="Stop the background browser to free memory — the login persists and it relaunches when needed"
+                  aria-label="Stop the background browser to free memory"
+                >
+                  <Power className={`h-3 w-3 ${busy === 'close-browser' ? 'animate-pulse' : ''}`} aria-hidden="true" />
+                  stop
+                </button>
+              </div>
+              <div className="relative overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
+                <img
+                  src={`/api/flow-bridge/frame?v=${frameTs}`}
+                  alt="Live view of the real Google Flow page inside the Flow Bridge browser"
+                  className="aspect-[16/10] w-full cursor-crosshair select-none object-cover"
+                  onClick={onFrameClick}
+                  onError={() => setFrameBad(true)}
+                  draggable={false}
+                />
+                {frameBad && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80 text-[11px] text-zinc-400">
+                    live view unavailable — retrying…
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-1.5">
+                <Input
+                  value={typed}
+                  onChange={(e) => setTyped(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      sendTyped()
+                    }
+                  }}
+                  placeholder="type into the Flow page (sign-in…)"
+                  className="h-8 border-zinc-700 bg-zinc-950 text-[11px] placeholder:text-zinc-600"
+                  aria-label="Text to type into the live Google Flow page"
+                  maxLength={500}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 border-zinc-700 bg-transparent px-2 text-[10px] text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  onClick={sendTyped}
+                  disabled={!typed.trim() || busy === 'type'}
+                  aria-label="Send the typed text to the live page"
+                >
+                  <Send className="h-3 w-3" aria-hidden="true" />
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 border-zinc-700 bg-transparent px-2 text-[10px] text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  onClick={() => void control('key', { key: 'Enter' })}
+                  title="Press Enter on the live page"
+                  aria-label="Press Enter on the live page"
+                >
+                  <Keyboard className="h-3 w-3" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }
 
@@ -1512,7 +1802,12 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
   const mode: 'real' | 'simulation' = bridge?.mode ?? 'real'
   const simOn = mode === 'simulation'
   const needsLogin = !offline && mode === 'real' && bridge?.loginState !== 'ready'
-  const readyForAuto = !offline && (simOn || (mode === 'real' && bridge?.loginState === 'ready'))
+  // AUTO-START only ever fires for the REAL bridge, logged in. Simulation
+  // (placeholder frames — "raw images, not from Flow") must NEVER start by
+  // itself: it is a deliberate, clearly-labelled testing action.
+  const readyForAuto = !offline && mode === 'real' && bridge?.loginState === 'ready'
+  // The manual engine button stays available in simulation (explicit test).
+  const canStartEngine = !offline && (simOn || (mode === 'real' && bridge?.loginState === 'ready'))
 
   const autoStatus = auto?.status ?? 'none'
   const engineOn = autoStatus === 'running' || autoStatus === 'starting'
@@ -1605,8 +1900,11 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
     }
   }, [busy, snap.id, toast])
 
-  // FULL AUTOPILOT — as soon as the bridge is ready (simulation, or real +
-  // logged-in), the engine starts itself. One-time guard; opt out above.
+  // FULL AUTOPILOT — as soon as the REAL bridge is logged in, the engine
+  // starts itself (one-time guard; opt out above). Simulation is deliberately
+  // excluded — test generation only starts from an explicit click. Note the
+  // orchestrator ALSO tries to start the engine server-side the moment a run
+  // pauses, so this is a browser-side safety net, not the only trigger.
   useEffect(() => {
     if (!autoStart || autoStartedRef.current) return
     if (autoStatus !== 'none') return
@@ -1666,19 +1964,16 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-400">
-          <label className="flex cursor-pointer items-center gap-1.5" title="Start the engine automatically as soon as the bridge is ready">
+          <label
+            className="flex cursor-pointer items-center gap-1.5"
+            title="Start the engine automatically as soon as the REAL bridge is connected and logged in (never in simulation)"
+          >
             <Switch checked={autoStart} onCheckedChange={setAutoStart} aria-label="Auto-start when the bridge is ready" />
             auto-start
           </label>
-          <label className="flex cursor-pointer items-center gap-1.5" title="Test the whole pipeline with placeholder images (no Google)">
-            <Switch
-              checked={simOn}
-              disabled={offline || busy === 'mode'}
-              onCheckedChange={(v) => void control('mode', { mode: v ? 'simulation' : 'real' })}
-              aria-label="Simulation mode (placeholder images)"
-            />
-            simulation
-          </label>
+          {/* The simulation switch was demoted from this header into the
+              “Testing” collapsible below after a user mistook placeholder
+              frames for real Flow output — it must be a deliberate action. */}
         </div>
       </div>
 
@@ -1733,12 +2028,18 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
               <Button
                 type="button"
                 size="sm"
-                className="h-8 bg-emerald-500 text-zinc-950 hover:bg-emerald-400"
+                className={
+                  simOn
+                    ? 'h-8 border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                    : 'h-8 bg-emerald-500 text-zinc-950 hover:bg-emerald-400'
+                }
                 onClick={() => void startAuto(false)}
-                disabled={!readyForAuto || busy === 'auto' || autoStatus === 'completed'}
+                disabled={!canStartEngine || busy === 'auto' || autoStatus === 'completed'}
                 title={
-                  readyForAuto
-                    ? 'Send every pending prompt to the real Google Flow via the bridge'
+                  canStartEngine
+                    ? simOn
+                      ? 'Test the pipeline with clearly-labelled placeholder frames (not real Flow)'
+                      : 'Send every pending prompt to the real Google Flow via the bridge'
                     : 'The bridge must be running (and logged in for real mode) first'
                 }
               >
@@ -1747,7 +2048,11 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
                 ) : (
                   <Bot className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
                 )}
-                {autoStatus === 'completed' ? 'Generated' : 'Start auto-generation'}
+                {autoStatus === 'completed'
+                  ? 'Generated'
+                  : simOn
+                    ? 'Start TEST generation (placeholders)'
+                    : 'Start auto-generation'}
               </Button>
             )}
             {auto?.finishing && (
@@ -1838,6 +2143,31 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
             Google Flow has no public API — the bridge drives its real web UI inside a logged-in
             Chromium, spending your own Flow credits at Flow’s natural pace. Nothing is bypassed.
           </p>
+
+          {/* ── Testing (deliberate, clearly separated) ── */}
+          <Collapsible className="rounded-md border border-zinc-800 bg-zinc-950/40">
+            <CollapsibleTrigger className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500 transition-colors hover:text-zinc-300">
+              <FlaskConical className="h-3 w-3" aria-hidden="true" />
+              testing tools
+              <ChevronDown className="ml-auto h-3 w-3 transition-transform [[data-state=open]>&]:rotate-180" aria-hidden="true" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="px-3 pb-3">
+              <label className="flex cursor-pointer items-center gap-2 text-[11px] text-zinc-400">
+                <Switch
+                  checked={simOn}
+                  disabled={offline || busy === 'mode'}
+                  onCheckedChange={(v) => void control('mode', { mode: v ? 'simulation' : 'real' })}
+                  aria-label="Simulation mode (placeholder images, not real Flow)"
+                />
+                simulation mode
+              </label>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-zinc-600">
+                Replaces real generation with clearly-labelled placeholder frames so the whole
+                pipeline can be tested without Google. Never auto-starts — press “Start TEST
+                generation” above deliberately. Turn it OFF before real runs.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* ── right: live view of the REAL Google Flow tab ── */}

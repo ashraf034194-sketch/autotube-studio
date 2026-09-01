@@ -20,6 +20,57 @@ import {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// ─── MULTI-USER: assembly concurrency gate ────────────────────────────────────
+//
+// Unlimited jobs are accepted; at most MAX_CONCURRENT_ASSEMBLES ffmpeg
+// pipelines run simultaneously. Excess jobs wait in a FIFO (their polled
+// snapshot shows a "queued" stage) and start as slots free. Cached on
+// globalThis so dev HMR cannot fork the counter across module instances.
+const MAX_CONCURRENT_ASSEMBLIES = 2
+const gSem = globalThis as unknown as { __videoAssemblySem?: { active: number; queue: number[] } }
+const SEM = (gSem.__videoAssemblySem ??= { active: 0, queue: [] })
+
+/**
+ * Run `runVideoAssembly` under the concurrency gate. Resolves when the job has
+ * been STARTED (not finished) — identical fire-and-forget semantics to the old
+ * direct call, plus queueing for the multi-user case.
+ */
+function enqueueAssembly(job: VideoJobT, params: AssembleParamsT): Promise<void> {
+  return new Promise((resolve) => {
+    const start = () => {
+      SEM.active++
+      resolve() // slot acquired — the caller's response goes out now
+      runVideoAssembly(job, params)
+        .catch((err) => {
+          // runVideoAssembly handles its own error state; safety net only.
+          job.status = 'error'
+          job.stage = 'error'
+          job.error = err instanceof Error ? err.message : String(err)
+          console.error(`[video] Job ${job.id} crashed unexpectedly:`, job.error)
+        })
+        .finally(() => {
+          SEM.active--
+          const next = SEM.queue.shift()
+          if (next) next()
+        })
+    }
+    if (SEM.active < MAX_CONCURRENT_ASSEMBLIES) {
+      start()
+    } else {
+      // Queued — mirror the wait into the job's own live snapshot.
+      job.stage = 'queued — waiting for a free assembly slot'
+      console.log(
+        `[video] Job ${job.id} queued (${SEM.queue.length} waiting, ${SEM.active} assembling)`
+      )
+      SEM.queue.push(start)
+    }
+  })
+}
+
+// Local structural types (avoid importing the full internal VideoJob surface).
+type VideoJobT = Parameters<typeof runVideoAssembly>[0]
+type AssembleParamsT = Parameters<typeof runVideoAssembly>[1]
+
 // ─── Music library (bundled, royalty-free) ──────────────────────────────────────
 //
 // Three 60-second MP3 tracks synthesised with FFmpeg's `aevalsrc` + LFO
@@ -308,7 +359,13 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Kick off background assembly (does not block the response) ──
-  runVideoAssembly(job, {
+  // MULTI-USER: unlimited jobs are accepted, but at most MAX_CONCURRENT_ASSEMBLIES
+  // ffmpeg pipelines run at once — the rest queue here (status "processing",
+  // stage "queued — waiting for a free assembly slot") and start the moment a
+  // slot frees. This keeps N simultaneous users working without thrashing
+  // CPU/RAM into OOM. The video route's own per-job state map is keyed by id,
+  // so every user's job is fully independent.
+  void enqueueAssembly(job, {
     imageJobId: body.imageJobId,
     imageCount: body.imageCount as number,
     audioPath,
@@ -326,12 +383,6 @@ export async function POST(req: NextRequest) {
     outroEnabled: effectiveOutroEnabled,
     outroCtaText: outroCtaText ?? undefined,
     resolution
-  }).catch((err) => {
-    // runVideoAssembly handles its own error state; this is a safety net.
-    job.status = 'error'
-    job.stage = 'error'
-    job.error = err instanceof Error ? err.message : String(err)
-    console.error(`[video] Job ${job.id} crashed unexpectedly:`, job.error)
   })
 
   const snap = snapshotJob(job)

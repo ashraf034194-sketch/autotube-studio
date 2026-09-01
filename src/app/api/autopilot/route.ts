@@ -19,6 +19,7 @@ import {
   COMPOSITION_OPTIONS
 } from '@/lib/flow-studio/types'
 import { type AutopilotSettings, type AutopilotSnapshot } from '@/lib/autopilot/types'
+import { startFlowAuto } from '@/lib/autopilot/flow-auto'
 import {
   autopilotJobs,
   beginStage,
@@ -478,6 +479,20 @@ async function runAutopilot(job: AutopilotJobInternal, transcript: string): Prom
           console.log(
             `[autopilot ${job.id}] AWAITING FLOW IMAGES — ${data.total} prompts ready (image job ${imgStartData.jobId}); run paused until uploads finish`
           )
+          // SERVER-SIDE AUTOPILOT: try to start the Flow-auto engine right
+          // here — no browser round-trip needed. If the bridge is ready +
+          // logged in, every image slot fills by itself (works for every
+          // concurrent user too — engines are keyed per run). If the bridge
+          // is offline or needs login, this returns not-ok silently and the
+          // run waits for the panel / manual handoff as before.
+          try {
+            const auto = await startFlowAuto(job.id)
+            if (auto.ok) {
+              console.log(`[autopilot ${job.id}] Flow-auto engine started server-side`)
+            }
+          } catch {
+            /* engine start is best-effort — the pause UI remains the fallback */
+          }
           resolve()
           return
         }
@@ -603,23 +618,17 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── Guard: one active autopilot at a time (duplicate protection) ──
-  // An awaiting-Images run ALSO blocks new starts: its resume context (the
-  // voiceover audio) only lives in memory and must not be orphaned.
-  for (const existing of autopilotJobs.values()) {
-    if (existing.status === 'running' || existing.status === 'awaiting_images') {
-      return NextResponse.json(
-        {
-          error:
-            existing.status === 'awaiting_images'
-              ? 'An autopilot run is paused at the Google Flow handoff — finish (or let expire) its image uploads before starting another.'
-              : 'An autopilot run is already in progress — wait for it to finish before starting another.',
-          existingId: existing.id
-        },
-        { status: 409 }
-      )
-    }
-  }
+  // ── MULTI-USER: unlimited concurrent runs ──
+  // The old "one active autopilot at a time" gate was removed at the owner's
+  // request — every user gets their own job (keyed by id in the shared store).
+  // Heavy shared resources stay safe naturally:
+  //   • image generation  — all engines enqueue into the ONE Flow Bridge,
+  //                          which processes tasks strictly one at a time
+  //   • video assembly    — the /api/video route caps concurrent ffmpeg jobs
+  //                          (queued beyond the cap)
+  //   • voiceover / LLM   — per-request, independent
+  // Cleanup: stale runs expire via the TTL sweeper in GET.
+  cleanupExpiredAutopilotJobs()
 
   const job: AutopilotJobInternal = {
     id: randomUUID(),
