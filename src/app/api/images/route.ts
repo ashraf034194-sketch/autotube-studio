@@ -56,7 +56,11 @@ interface ImageJob {
   currentLabel?: string
 }
 
-const jobs = new Map<string, ImageJob>()
+// Shared job store. Cached on globalThis so Next dev HMR module re-evaluation
+// (new module instances after edits) keeps ONE live Map instead of forking
+// state across route modules. In production there is a single instance anyway.
+const gJobs = globalThis as unknown as { __imageJobs?: Map<string, ImageJob> }
+const jobs: Map<string, ImageJob> = (gJobs.__imageJobs ??= new Map<string, ImageJob>())
 // 12 hours — Flow-mode jobs wait for the USER to generate images in Google
 // Flow (a manual round-trip that can easily take 30-60+ min for 57 images)
 // and then upload them. 12h gives the handoff ample time while still

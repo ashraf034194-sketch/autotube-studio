@@ -39,7 +39,12 @@ export interface AutopilotJobInternal extends AutopilotJob {
   resume?: FlowResumeContext
 }
 
-export const autopilotJobs = new Map<string, AutopilotJobInternal>()
+// Shared job store — cached on globalThis so Next dev HMR re-evaluation (new
+// module instances after edits) keeps ONE live Map instead of forking state
+// between route modules. In production there is a single instance anyway.
+const gJobs = globalThis as unknown as { __autopilotJobs?: Map<string, AutopilotJobInternal> }
+export const autopilotJobs: Map<string, AutopilotJobInternal> = (gJobs.__autopilotJobs ??=
+  new Map<string, AutopilotJobInternal>())
 
 /** Completed/failed runs are kept 4 hours; awaiting-Flow runs get 12 hours
  *  (the manual Flow round-trip can take 30-60+ minutes for big batches). */

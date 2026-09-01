@@ -1,0 +1,12 @@
+{
+  "name": "autotube-flow-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AutoTube Flow Bridge — drives the REAL Google Flow web app in a logged-in Chromium so the autopilot can generate images automatically (Flow has no public API).",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "playwright-core": "^1.62.1"
+  }
+}

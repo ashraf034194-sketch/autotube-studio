@@ -1,0 +1,19 @@
+{
+  "_comment": "Flow UI automation selectors. Google Flow (labs.google/fx/tools/flow) has NO public API and its DOM changes often — edit this file (no code changes needed) if the bridge stops finding the prompt box or submit button. Use the app's live view to inspect the current Flow page.",
+  "flowLandingUrl": "https://labs.google/fx/tools/flow",
+  "flowAppUrl": "https://flow.google.com/",
+  "promptBoxSelectors": [
+    "textarea",
+    "[contenteditable='true']",
+    "div[role='textbox']"
+  ],
+  "submitButtonSelectors": [
+    "button[type='submit']",
+    "button[aria-label*='Generate' i]",
+    "button[aria-label*='Create' i]",
+    "button[aria-label*='Submit' i]"
+  ],
+  "ingredientToggleSelectors": [],
+  "generateTimeoutMs": 150000,
+  "settleMs": 900
+}

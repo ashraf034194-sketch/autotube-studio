@@ -30,7 +30,16 @@ import {
   ExternalLink,
   ClipboardCopy,
   Upload,
-  X
+  X,
+  Bot,
+  Monitor,
+  LogIn,
+  Square,
+  FlaskConical,
+  Send,
+  Keyboard,
+  Power,
+  RefreshCw
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -138,7 +147,7 @@ const STAGE_TAGLINES: Record<string, string> = {
   rewrite: 'The script doctor rewrites your transcript into a fresh, original narration script.',
   voiceover: 'A neural voice narrates the rewritten script, split into perfectly timed segments.',
   prompts: 'The Flow Prompt Studio engine designs a Style DNA and writes one image prompt per narration chunk.',
-  images: 'Copy the prompts into Google Flow, generate the images with your Flow account, and upload them back — assembly then continues automatically.',
+  images: 'The Flow Bridge drives the real Google Flow page and fills every image slot automatically — the manual handoff below is the fallback.',
   video: 'FFmpeg assembles clips, captions, music and motion into the finished MP4.'
 }
 
@@ -260,7 +269,7 @@ export default function Home() {
       if (s === 'awaiting_images') {
         toast({
           title: 'Prompts ready',
-          description: `${snap?.live.images.total ?? 0} image prompts are written — open Google Flow, generate the images, and upload them here to continue.`
+          description: `${snap?.live.images.total ?? 0} image prompts are written — the Flow Bridge starts generating them automatically when connected + logged in (otherwise use the manual handoff).`
         })
       } else if (s === 'completed' && prev === 'awaiting_images') {
         toast({
@@ -393,9 +402,10 @@ export default function Home() {
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
             Your only job is the script. The autopilot agent rewrites it, narrates it, and writes
-            image prompts with the Flow&nbsp;Prompt&nbsp;Studio engine. Then it hands off to
-            Google&nbsp;Flow — you generate the images there (with your own Flow account) and drop
-            them back here — and the agent edits everything into a finished MP4.
+            image prompts with the Flow&nbsp;Prompt&nbsp;Studio engine. A second tab keeps the
+            real Google&nbsp;Flow open — the Flow&nbsp;Bridge drives it for you with your own
+            logged-in account — and the agent edits everything into a finished MP4. No bridge?
+            The manual handoff still works.
           </p>
           <ol className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-zinc-400" aria-label="Pipeline stages">
             {['Script', 'Rewrite', 'Voiceover', 'Prompts', 'Flow Images', 'Video'].map((step, i) => (
@@ -411,7 +421,9 @@ export default function Home() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* ══ LEFT: input + settings ══ */}
-          <div className="space-y-6">
+          {/* min-w-0: grid items default to min-width:auto — without this, the
+              field-sizing-content textarea's intrinsic width blows out mobile. */}
+          <div className="min-w-0 space-y-6">
             {/* Script card */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -737,14 +749,14 @@ export default function Home() {
                           {starting
                             ? 'Engaging autopilot…'
                             : isAwaiting
-                              ? 'Waiting for your Google Flow images'
+                              ? 'Flow Bridge is generating your images'
                               : 'Autopilot is running'}
                         </p>
                         <p className="text-xs text-amber-200/70">
                           {starting
                             ? 'Creating the pipeline run…'
                             : isAwaiting
-                              ? `Prompts are ready — generate the images in Google Flow and upload them below (elapsed ${formatDuration(elapsedSec)}).`
+                              ? `Prompts are ready — the Flow Bridge fills the slots below automatically when connected (elapsed ${formatDuration(elapsedSec)}).`
                               : `Elapsed ${formatDuration(elapsedSec)} — the agent works on its own; this page updates live.`}
                         </p>
                       </div>
@@ -771,7 +783,7 @@ export default function Home() {
           </div>
 
           {/* ══ RIGHT: live pipeline console ══ */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -816,8 +828,8 @@ export default function Home() {
                     )}
                   </div>
                   <CardDescription>
-                    Every stage runs by itself — except the Google Flow handoff, where the agent
-                    waits for your images.
+                    Every stage runs by itself. The Flow Bridge even automates the Google Flow
+                    image stage while it stays connected — manual handoff is the fallback.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1034,8 +1046,8 @@ export default function Home() {
               },
               {
                 icon: ImageIcon,
-                title: 'Google Flow image handoff',
-                body: 'Google Flow (Imagen) is the only image source — Pexels, Unsplash and the bundled AI generator were removed. The agent writes every prompt; you generate in Flow with your own account and drop the images back in.'
+                title: 'Google Flow, driven automatically',
+                body: 'Google Flow (Imagen) is the only image source — Pexels, Unsplash and the bundled AI generator were removed. The Flow Bridge keeps the real Flow open in a logged-in Chromium and fills every slot for you; manual handoff remains the fallback.'
               },
               {
                 icon: Clapperboard,
@@ -1064,9 +1076,9 @@ export default function Home() {
       <footer className="mt-auto border-t border-zinc-800/70 bg-zinc-950">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-center text-xs text-zinc-500 sm:flex-row sm:px-6 sm:text-left">
           <p>
-            AutoTube Studio · Autopilot — script to finished video, with a Google Flow image
-            handoff. Text AI runs on the platform’s bundled models; images come from your
-            Google Flow account. No API keys.
+            AutoTube Studio · Autopilot — script to finished video. Text AI runs on the
+            platform’s bundled models; images come from your own Google Flow account, driven
+            by the Flow Bridge (manual fallback included). No API keys.
           </p>
           <p className="text-zinc-600">Runs are kept 4 hours after finishing (Flow handoffs 12 hours).</p>
         </div>
@@ -1146,6 +1158,576 @@ function FlowThumbCell({ slot, jobId }: { slot: ImageSlotLive; jobId: string }) 
     >
       <span className="font-mono text-[10px] text-zinc-600">#{slot.index + 1}</span>
     </div>
+  )
+}
+
+// ─── Flow Bridge — automatic generation panel (the "second tab") ─────────────
+//
+// One tab is THIS app. The other tab is the REAL Google Flow, kept open inside
+// the bridge's logged-in Chromium (mini-services/flow-bridge, :3031). Google
+// Flow has no public API and a web page cannot control another site's tab —
+// the bridge process is the compliant missing link. This panel is the remote
+// control for that second tab:
+//   • live view  — a live screenshot of the real Flow page; click it to click
+//                  Flow, type below to type into Flow (used for the Google
+//                  sign-in, once — the profile persists after that)
+//   • engine     — sends every pending prompt to the bridge, saves each
+//                  finished image into its slot below, then auto-resumes
+//                  video assembly. Zero clicks.
+//   • simulation — a clearly-labelled TEST mode with placeholder frames, so
+//                  the whole pipeline can be verified without Google.
+
+interface BridgeStatusClient {
+  ok: boolean
+  offline?: boolean
+  mode?: 'real' | 'simulation'
+  browserRunning?: boolean
+  chromiumFound?: boolean
+  pageUrl?: string | null
+  loginState?: 'unknown' | 'needs-login' | 'ready'
+  queue?: { pending: number; activeId: string | null; done: number; failed: number }
+  lastError?: string | null
+}
+
+interface AutoRunClient {
+  autopilotId: string
+  status: 'none' | 'starting' | 'running' | 'completed' | 'partial' | 'error' | 'stopped'
+  mode?: string
+  total?: number
+  doneCount?: number
+  failedCount?: number
+  currentSlot?: number | null
+  currentPrompt?: string | null
+  lastError?: string | null
+  logs?: { t: number; msg: string }[]
+  finishing?: boolean
+}
+
+function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
+  const { toast } = useToast()
+  const [bridge, setBridge] = useState<BridgeStatusClient | null>(null)
+  const [auto, setAuto] = useState<AutoRunClient | null>(null)
+  const [frameBad, setFrameBad] = useState(false)
+  const [frameTs, setFrameTs] = useState(0)
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState<string | null>(null)
+  const [autoStart, setAutoStart] = useState(true)
+  const [showLogs, setShowLogs] = useState(false)
+  const autoStartedRef = useRef(false)
+
+  // Bridge health polling (2.5s)
+  useEffect(() => {
+    let alive = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const tick = async () => {
+      try {
+        const res = await fetch('/api/flow-bridge/status')
+        if (alive) setBridge((await res.json()) as BridgeStatusClient)
+      } catch {
+        /* offline — the stale state below covers it */
+      }
+      if (alive) timer = setTimeout(tick, 2500)
+    }
+    void tick()
+    return () => {
+      alive = false
+      if (timer) clearTimeout(timer)
+    }
+  }, [])
+
+  // Auto-run state polling (2s)
+  useEffect(() => {
+    let alive = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/flow-bridge/auto?autopilotId=${encodeURIComponent(snap.id)}`)
+        if (alive) setAuto((await res.json()) as AutoRunClient)
+      } catch {
+        /* ignore */
+      }
+      if (alive) timer = setTimeout(tick, 2000)
+    }
+    void tick()
+    return () => {
+      alive = false
+      if (timer) clearTimeout(timer)
+    }
+  }, [snap.id])
+
+  const browserRunning = !!bridge?.browserRunning && bridge?.offline !== true && bridge?.ok === true
+
+  // Live-view frame refresh (2.2s) while the browser is up
+  useEffect(() => {
+    if (!browserRunning) return
+    setFrameBad(false)
+    const iv = setInterval(() => setFrameTs(Date.now()), 2200)
+    return () => clearInterval(iv)
+  }, [browserRunning])
+
+  const offline = !bridge || bridge.offline === true || bridge.ok !== true
+  const mode: 'real' | 'simulation' = bridge?.mode ?? 'real'
+  const simOn = mode === 'simulation'
+  const needsLogin = !offline && mode === 'real' && bridge?.loginState !== 'ready'
+  const readyForAuto = !offline && (simOn || (mode === 'real' && bridge?.loginState === 'ready'))
+
+  const autoStatus = auto?.status ?? 'none'
+  const engineOn = autoStatus === 'running' || autoStatus === 'starting'
+  const totalSlots = auto?.total ?? snap.live.images.total
+  const doneCount = auto?.doneCount ?? snap.live.images.completed
+  const engineProgress = totalSlots > 0 ? Math.round((doneCount / totalSlots) * 100) : 0
+
+  const control = useCallback(
+    async (action: string, payload: Record<string, unknown> = {}) => {
+      setBusy(action)
+      try {
+        const res = await fetch('/api/flow-bridge/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, ...payload })
+        })
+        const json = (await res.json()) as { ok?: boolean; error?: string }
+        if (!res.ok || !json.ok) throw new Error(json.error || 'The bridge refused the action.')
+        return true
+      } catch (err) {
+        toast({
+          variant: 'destructive',
+          title: 'Bridge action failed',
+          description: err instanceof Error ? err.message : 'Action failed.'
+        })
+        return false
+      } finally {
+        setBusy(null)
+      }
+    },
+    [toast]
+  )
+
+  const startAuto = useCallback(
+    async (silent: boolean) => {
+      if (busy || engineOn) return
+      setBusy('auto')
+      try {
+        const res = await fetch('/api/flow-bridge/auto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ autopilotId: snap.id })
+        })
+        const json = (await res.json()) as { ok?: boolean; error?: string }
+        if (!res.ok || !json.ok) throw new Error(json.error || 'Could not start the engine.')
+        if (!silent) {
+          toast({
+            title: 'Flow Bridge is generating',
+            description: 'Slots fill below by themselves — video assembly resumes when done.'
+          })
+        }
+      } catch (err) {
+        if (!silent) {
+          toast({
+            variant: 'destructive',
+            title: 'Auto-generation failed',
+            description: err instanceof Error ? err.message : 'Engine error.'
+          })
+        }
+      } finally {
+        setBusy(null)
+      }
+    },
+    [busy, engineOn, snap.id, toast]
+  )
+
+  const stopAuto = useCallback(async () => {
+    if (busy) return
+    setBusy('stop')
+    try {
+      const res = await fetch('/api/flow-bridge/auto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autopilotId: snap.id, action: 'stop' })
+      })
+      const json = (await res.json()) as { ok?: boolean; error?: string }
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Could not stop the engine.')
+      toast({
+        title: 'Engine stopping',
+        description: 'It finishes the image in flight, then halts. Manual handoff stays available.'
+      })
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Stop failed',
+        description: err instanceof Error ? err.message : 'Could not stop the engine.'
+      })
+    } finally {
+      setBusy(null)
+    }
+  }, [busy, snap.id, toast])
+
+  // FULL AUTOPILOT — as soon as the bridge is ready (simulation, or real +
+  // logged-in), the engine starts itself. One-time guard; opt out above.
+  useEffect(() => {
+    if (!autoStart || autoStartedRef.current) return
+    if (autoStatus !== 'none') return
+    if (readyForAuto) {
+      autoStartedRef.current = true
+      void startAuto(true)
+    }
+  }, [autoStart, autoStatus, readyForAuto, startAuto])
+
+  const onFrameClick = (e: React.MouseEvent<HTMLImageElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = (e.clientX - rect.left) / rect.width
+    const y = (e.clientY - rect.top) / rect.height
+    void control('click', { x, y })
+  }
+
+  const sendTyped = () => {
+    const text = typed.trim()
+    if (!text) return
+    void control('type', { text })
+    setTyped('')
+  }
+
+  const statusColor = offline
+    ? 'bg-zinc-500'
+    : simOn
+      ? 'bg-amber-400'
+      : needsLogin
+        ? 'bg-amber-400'
+        : 'bg-emerald-400'
+  const statusText = offline
+    ? 'offline'
+    : simOn
+      ? 'test mode'
+      : needsLogin
+        ? 'needs Google login'
+        : 'connected · logged in'
+
+  return (
+    <section
+      className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3"
+      aria-label="Flow Bridge — automatic generation from the real Google Flow"
+    >
+      {/* ── header ── */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-emerald-300">
+          <Bot className="h-4 w-4" aria-hidden="true" />
+          Flow Bridge — automatic generation
+          <span className="flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] font-normal text-zinc-300">
+            <span className={`h-1.5 w-1.5 rounded-full ${statusColor}`} aria-hidden="true" />
+            {statusText}
+          </span>
+          {simOn && (
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+              placeholders, not real Flow
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-400">
+          <label className="flex cursor-pointer items-center gap-1.5" title="Start the engine automatically as soon as the bridge is ready">
+            <Switch checked={autoStart} onCheckedChange={setAutoStart} aria-label="Auto-start when the bridge is ready" />
+            auto-start
+          </label>
+          <label className="flex cursor-pointer items-center gap-1.5" title="Test the whole pipeline with placeholder images (no Google)">
+            <Switch
+              checked={simOn}
+              disabled={offline || busy === 'mode'}
+              onCheckedChange={(v) => void control('mode', { mode: v ? 'simulation' : 'real' })}
+              aria-label="Simulation mode (placeholder images)"
+            />
+            simulation
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* ── left: engine ── */}
+        <div className="min-w-0 space-y-2.5">
+          {offline ? (
+            <div className="flex items-start gap-2 rounded-md border border-zinc-800 bg-zinc-950/60 px-3 py-2.5 text-[11px] leading-relaxed text-zinc-400">
+              <Power className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
+              <p>
+                <span className="font-semibold text-zinc-300">Flow Bridge is offline.</span> Start
+                it on this machine with{' '}
+                <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-[10px] text-amber-300">
+                  bun run dev
+                </code>{' '}
+                inside{' '}
+                <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-[10px] text-amber-300">
+                  mini-services/flow-bridge
+                </code>{' '}
+                — then this panel turns into the live second tab and generation goes hands-off. The
+                manual handoff below works meanwhile.
+              </p>
+            </div>
+          ) : needsLogin ? (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/25 bg-amber-500/5 px-3 py-2.5 text-[11px] leading-relaxed text-amber-200/80">
+              <LogIn className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+              <p>
+                <span className="font-semibold text-amber-300">One-time Google login.</span> Click{' '}
+                <span className="font-semibold">Open Google Flow</span> on the live view, then sign
+                in by clicking the page and typing below (the login persists in the bridge’s
+                profile). Honest note: Google sometimes blocks sign-ins from automated browsers —
+                if that happens, the bridge must run on your own machine instead.
+              </p>
+            </div>
+          ) : null}
+
+          {/* engine controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {engineOn ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                onClick={() => void stopAuto()}
+                disabled={busy === 'stop' || auto?.finishing}
+              >
+                <Square className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                Stop engine
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 bg-emerald-500 text-zinc-950 hover:bg-emerald-400"
+                onClick={() => void startAuto(false)}
+                disabled={!readyForAuto || busy === 'auto' || autoStatus === 'completed'}
+                title={
+                  readyForAuto
+                    ? 'Send every pending prompt to the real Google Flow via the bridge'
+                    : 'The bridge must be running (and logged in for real mode) first'
+                }
+              >
+                {busy === 'auto' ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Bot className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {autoStatus === 'completed' ? 'Generated' : 'Start auto-generation'}
+              </Button>
+            )}
+            {auto?.finishing && (
+              <span className="flex items-center gap-1.5 text-[11px] text-emerald-300">
+                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                resuming video assembly…
+              </span>
+            )}
+            {engineOn && auto?.currentSlot != null && (
+              <span className="text-[11px] text-zinc-400">
+                generating <span className="font-mono text-emerald-400">#{auto.currentSlot + 1}</span>/{totalSlots} ·{' '}
+                {simOn ? 'placeholder' : 'real Flow'}
+              </span>
+            )}
+          </div>
+
+          {/* progress */}
+          {(engineOn || autoStatus === 'completed' || autoStatus === 'partial') && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                <span>
+                  {doneCount}/{totalSlots} images generated
+                  {auto?.failedCount ? ` · ${auto.failedCount} failed` : ''}
+                </span>
+                <span className="tabular-nums">{engineProgress}%</span>
+              </div>
+              <Progress
+                value={engineProgress}
+                className="h-1.5 [&>div]:bg-emerald-500"
+                aria-label="Flow Bridge generation progress"
+              />
+              {engineOn && auto?.currentPrompt && (
+                <p className="line-clamp-1 font-mono text-[10px] text-zinc-500" title={auto.currentPrompt}>
+                  {auto.currentPrompt}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* terminal states */}
+          {autoStatus === 'completed' && (
+            <p className="flex items-center gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-300">
+              <Check className="h-3.5 w-3.5" aria-hidden="true" />
+              All {doneCount} images generated — video assembly resumed automatically.
+            </p>
+          )}
+          {autoStatus === 'partial' && (
+            <p className="rounded-md border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-300">
+              {doneCount}/{totalSlots} generated ({auto?.failedCount ?? 0} failed). Press “Assemble
+              video” below, or start the engine again for the rest.
+            </p>
+          )}
+          {(autoStatus === 'error' || (autoStatus === 'stopped' && auto?.lastError)) && auto?.lastError && (
+            <p className="flex items-start gap-1.5 rounded-md border border-red-500/25 bg-red-500/5 px-3 py-2 text-[11px] leading-relaxed text-red-300">
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {auto.lastError}
+            </p>
+          )}
+
+          {/* logs */}
+          {auto?.logs && auto.logs.length > 0 && (
+            <div>
+              <button
+                type="button"
+                className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 hover:text-zinc-300"
+                onClick={() => setShowLogs((v) => !v)}
+                aria-expanded={showLogs}
+              >
+                <ChevronDown className={`h-3 w-3 transition-transform ${showLogs ? 'rotate-180' : ''}`} aria-hidden="true" />
+                engine log ({auto.logs.length})
+              </button>
+              {showLogs && (
+                <div className="mt-1 max-h-32 space-y-0.5 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-950/70 p-2 font-mono text-[10px] leading-relaxed text-zinc-500 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-700">
+                  {auto.logs.map((l, i) => (
+                    <p key={i}>
+                      <span className="text-zinc-600">
+                        {new Date(l.t).toLocaleTimeString([], { hour12: false })}
+                      </span>{' '}
+                      {l.msg}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <p className="text-[10px] leading-relaxed text-zinc-600">
+            Google Flow has no public API — the bridge drives its real web UI inside a logged-in
+            Chromium, spending your own Flow credits at Flow’s natural pace. Nothing is bypassed.
+          </p>
+        </div>
+
+        {/* ── right: live view of the REAL Google Flow tab ── */}
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            <span className="flex items-center gap-1">
+              <Monitor className="h-3 w-3" aria-hidden="true" />
+              live Flow tab
+            </span>
+            {browserRunning && (
+              <span className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 normal-case text-zinc-500 hover:text-zinc-300"
+                  onClick={() => void control('reload')}
+                  title="Reload the Flow page"
+                >
+                  <RefreshCw className={`h-3 w-3 ${busy === 'reload' ? 'animate-spin' : ''}`} aria-hidden="true" />
+                  reload
+                </button>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 normal-case text-zinc-500 hover:text-zinc-300"
+                  onClick={() => void control('close-browser')}
+                  title="Stop the background browser to free memory — the login persists and it relaunches when needed"
+                  aria-label="Stop the background browser to free memory"
+                >
+                  <Power className={`h-3 w-3 ${busy === 'close-browser' ? 'animate-pulse' : ''}`} aria-hidden="true" />
+                  stop
+                </button>
+              </span>
+            )}
+          </div>
+          <div className="relative overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
+            {browserRunning ? (
+              <>
+                <img
+                  src={`/api/flow-bridge/frame?v=${frameTs}`}
+                  alt="Live view of the real Google Flow page inside the Flow Bridge browser"
+                  className="aspect-[16/10] w-full cursor-crosshair select-none object-cover"
+                  onClick={onFrameClick}
+                  onError={() => setFrameBad(true)}
+                  draggable={false}
+                />
+                {frameBad && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80 text-[11px] text-zinc-400">
+                    live view unavailable — retrying…
+                  </div>
+                )}
+                <span className="pointer-events-none absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-zinc-950/80 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
+                  <span className="h-1 w-1 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" />
+                  live · click to control
+                </span>
+              </>
+            ) : (
+              <div className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-1 px-4 text-center">
+                <Monitor className="h-5 w-5 text-zinc-700" aria-hidden="true" />
+                <p className="text-[11px] text-zinc-500">the second tab appears here</p>
+                <p className="text-[10px] text-zinc-600">stopped for memory — click “Open Google Flow” to relaunch it</p>
+              </div>
+            )}
+          </div>
+
+          {/* login + typing controls */}
+          {browserRunning && (
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 border-zinc-700 bg-transparent px-2 text-[10px] text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  onClick={() => void control('login')}
+                  disabled={busy === 'login'}
+                >
+                  <LogIn className="mr-1 h-3 w-3" aria-hidden="true" />
+                  Open Google Flow
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 border-zinc-700 bg-transparent px-2 text-[10px] text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  onClick={() => void control('open-app')}
+                  disabled={busy === 'open-app'}
+                >
+                  <ExternalLink className="mr-1 h-3 w-3" aria-hidden="true" />
+                  Flow app
+                </Button>
+              </div>
+              <div className="flex gap-1.5">
+                <Input
+                  value={typed}
+                  onChange={(e) => setTyped(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      sendTyped()
+                    }
+                  }}
+                  placeholder="type into the Flow page (login, prompts…)"
+                  className="h-7 border-zinc-700 bg-zinc-950 text-[11px] placeholder:text-zinc-600"
+                  aria-label="Text to type into the live Google Flow page"
+                  maxLength={500}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 border-zinc-700 bg-transparent px-2 text-[10px] text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  onClick={sendTyped}
+                  disabled={!typed.trim() || busy === 'type'}
+                  aria-label="Send the typed text to the live page"
+                >
+                  <Send className="h-3 w-3" aria-hidden="true" />
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 border-zinc-700 bg-transparent px-2 text-[10px] text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  onClick={() => void control('key', { key: 'Enter' })}
+                  title="Press Enter on the live page"
+                  aria-label="Press Enter on the live page"
+                >
+                  <Keyboard className="h-3 w-3" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -1367,6 +1949,14 @@ function FlowHandoffPanel({ snap }: { snap: AutopilotSnapshot }) {
           </Button>
         </div>
       </div>
+
+      {/* Automatic engine — the Flow Bridge drives the REAL Google Flow tab */}
+      <FlowBridgePanel snap={snap} />
+
+      {/* Manual handoff — always-available fallback */}
+      <p className="pt-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        Manual handoff — fallback if the bridge is offline
+      </p>
 
       {/* 3-step instructions */}
       <ol className="grid gap-1.5 text-[11px] leading-relaxed text-zinc-400 sm:grid-cols-3">

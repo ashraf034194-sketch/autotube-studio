@@ -32,8 +32,11 @@ export const dynamic = 'force-dynamic'
  */
 const MAX_FILE_BYTES = 25 * 1024 * 1024 // 25 MB per image — Imagen exports are far smaller
 
-/** Mirror the image job's state onto the autopilot job's live.images. */
-function mirrorToAutopilot(job: AutopilotJobInternal): void {
+/** Mirror the image job's state onto the autopilot job's live.images.
+ *  Shared by the manual upload path AND the Flow Bridge auto-generation
+ *  engine (src/lib/autopilot/flow-auto.ts) so both keep live.images in
+ *  lockstep. */
+export function mirrorToAutopilot(job: AutopilotJobInternal, via: 'manual' | 'bridge' = 'manual'): void {
   const imageJob = job.live.images.jobId ? getFlowImageJob(job.live.images.jobId) : undefined
   if (!imageJob) return
   job.live.images.status = imageJob.status
@@ -50,10 +53,14 @@ function mirrorToAutopilot(job: AutopilotJobInternal): void {
     error: s.error
   }))
   job.artifacts.imageCount = imageJob.completed
+  const detail =
+    via === 'bridge'
+      ? `Flow Bridge auto-generation — ${imageJob.completed}/${imageJob.total} images generated in the real Google Flow.`
+      : `Google Flow handoff — ${imageJob.completed}/${imageJob.total} images received. Upload more, or press “Assemble video” when ready.`
   updateStage(
     job,
     'images',
-    `Google Flow handoff — ${imageJob.completed}/${imageJob.total} images received. Upload more, or press “Assemble video” when ready.`,
+    detail,
     imageJob.total > 0
       ? Math.round((imageJob.completed / imageJob.total) * 100)
       : null
