@@ -9,13 +9,14 @@ export const dynamic = 'force-dynamic'
  * Chromium (the "second tab" with the real Google Flow). The pause UI uses
  * this to: open the Flow login page, open Google's own sign-in page
  * ("Sign in with Google" — email / phone-tap / QR / account chooser),
- * click/typing for the Google sign-in (live view), reload, and switch
- * simulation/real mode.
+ * reset the Google profile when Google's security block appears
+ * ("reset-login" — fresh hardened browser + sign-in page), click/typing for
+ * the Google sign-in (live view), reload, and switch simulation/real mode.
  *
- * Actions: login | google-signin | open-app | reload | back | click | type | key | mode | close-browser
+ * Actions: login | google-signin | reset-login | open-app | reload | back | click | type | key | mode | close-browser
  */
 const ACTIONS = new Set([
-  'login', 'google-signin', 'open-app', 'reload', 'back', 'click', 'type', 'key', 'mode', 'close-browser'
+  'login', 'google-signin', 'reset-login', 'open-app', 'reload', 'back', 'click', 'type', 'key', 'mode', 'close-browser'
 ])
 
 export async function POST(req: NextRequest) {

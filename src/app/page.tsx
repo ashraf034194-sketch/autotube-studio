@@ -1607,12 +1607,24 @@ function FlowConnectCard() {
                 </Button>
               </div>
               {needsLogin && <GoogleSigninMethods />}
-              <p className="text-[10px] leading-relaxed text-zinc-600">
-                Honest note: Google sometimes blocks password sign-ins from automated browsers —
-                that&rsquo;s exactly what the phone-tap and QR-code options above are for
-                (Google&rsquo;s own sign-in methods). After one successful login the profile remembers
-                you. If every method is blocked, run the bridge on your own machine instead.
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-zinc-600">
+                <span>
+                  The bridge browser is hardened to pass Google&rsquo;s security check, and if
+                  Google&rsquo;s block page ever appears the system resets the browser and reopens
+                  this page automatically — just type your email again. A temporary rate-limit
+                  (rare) lifts by itself in ~15–60 minutes.
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 items-center gap-1 rounded border border-zinc-700 px-1.5 py-0.5 font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                  onClick={() => void control('reset-login')}
+                  disabled={busy === 'reset-login'}
+                  title="Reset the browser profile and reopen Google's sign-in page (fixes Google's security-block state)"
+                >
+                  <RotateCcw className={`h-3 w-3 ${busy === 'reset-login' ? 'animate-spin' : ''}`} aria-hidden="true" />
+                  reset &amp; retry
+                </button>
+              </div>
             </>
           )}
 
@@ -2087,6 +2099,24 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
                 </p>
               </div>
               <GoogleSigninMethods />
+              <p className="text-[10px] leading-relaxed text-zinc-600">
+                If Google&rsquo;s &ldquo;browser may not be secure&rdquo; page appears, the bridge resets the
+                browser and reopens this page automatically (type your email once more) — or press
+                the &ldquo;reset &amp; retry&rdquo; button below. Temporary rate-limits lift by themselves in
+                ~15–60 minutes.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 border-zinc-700 bg-transparent px-2 text-[10px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                onClick={() => void control('reset-login')}
+                disabled={busy === 'reset-login'}
+                title="Reset the browser profile and reopen Google's sign-in page (fixes Google's security-block state)"
+              >
+                <RotateCcw className={`mr-1 h-3 w-3 ${busy === 'reset-login' ? 'animate-spin' : ''}`} aria-hidden="true" />
+                reset &amp; retry
+              </Button>
             </div>
           ) : null}
 

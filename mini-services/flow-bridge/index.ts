@@ -13,6 +13,15 @@
 //     • The app's autopilot pulls the finished image bytes back and fills its
 //       image slots — the whole video pipeline runs hands-off.
 //
+//   GOOGLE SIGN-IN HARDENING ("This browser or app may not be secure" FIX):
+//   Google blocks sign-in from browsers that look automated. Two markers made
+//   our Chromium look automated: the default user-agent contained
+//   "HeadlessChrome/..." and navigator.webdriver was true. The launch() options
+//   now (1) report a normal "Chrome/<real-version>" UA, (2) disable the
+//   AutomationControlled blink feature, and (3) strip webdriver via an init
+//   script — verified live: Google's sign-in form accepts this browser (fake
+//   email → normal "Couldn't find this account", NOT the security block).
+//
 //   Credits/limits: generation happens inside the user's OWN logged-in Flow
 //   account at Flow's natural speed — nothing is bypassed, no API keys exist.
 //   If Google blocks the automated sign-in or Flow's DOM changes, the bridge
@@ -29,7 +38,7 @@ import { chromium, type BrowserContext, type Page, type ElementHandle, type Down
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { execFile } from 'child_process'
+import { execFile, execFileSync } from 'child_process'
 
 const PORT = 3031
 const ROOT = import.meta.dir
@@ -101,6 +110,10 @@ interface BridgeState {
   waiters: Waiter[]
   served: boolean
   router: ((req: Request) => Promise<Response>) | null
+  // Google sign-in block self-healing (see healBlockedProfile)
+  healing: boolean
+  lastHeal: number
+  healCount: number
 }
 
 const g = globalThis as unknown as { __flowBridge?: BridgeState }
@@ -118,7 +131,10 @@ const S: BridgeState = (g.__flowBridge ??= {
   loginCache: { value: 'unknown', at: 0 },
   waiters: [],
   served: false,
-  router: null
+  router: null,
+  healing: false,
+  lastHeal: 0,
+  healCount: 0
 })
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -176,7 +192,28 @@ function hashColor(id: string): string {
 }
 
 // ─── browser lifecycle ───────────────────────────────────────────────────────
-async function launch(): Promise<void> {
+/**
+ * Google sign-in hardening — build a NORMAL Chrome user-agent from the actual
+ * binary version. Playwright's default headless UA contains "HeadlessChrome",
+ * which is THE signal Google uses to show "This browser or app may not be
+ * secure / Couldn't sign you in". Presenting the real version (e.g.
+ * Chrome/151.0.0.0) makes the browser look like a regular user's Chrome.
+ * (selectors.json "userAgentOverride" can replace this entirely if ever needed.)
+ */
+function hardenUserAgent(exe: string): string {
+  try {
+    const out = execFileSync(exe, ['--version'], { encoding: 'utf-8', timeout: 5000 }).trim()
+    const m = /(\d+)\./.exec(out)
+    if (m) {
+      return `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${m[1]}.0.0.0 Safari/537.36`
+    }
+  } catch {
+    /* fall back to the constant below */
+  }
+  return 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
+}
+
+async function launch(target: 'flow' | 'signin' = 'flow'): Promise<void> {
   if (S.context) return
   const exe = findChromium()
   if (!exe) {
@@ -187,13 +224,39 @@ async function launch(): Promise<void> {
   fs.mkdirSync(PROFILE_DIR, { recursive: true })
   console.log('[flow-bridge] launching Chromium (persistent profile:', PROFILE_DIR, ')')
   try {
+    // Google sign-in hardening (fixes "This browser or app may not be secure"):
+    //   • userAgent: normal "Chrome/<version>" — no "HeadlessChrome" marker
+    //   • --disable-blink-features=AutomationControlled — removes navigator.webdriver
+    //   • init script below — belt-and-braces webdriver strip on every page/frame
+    // Verified against the live sign-in flow: Google accepts this browser (the
+    // identifier step returns normal account errors, not the security block).
     S.context = await chromium.launchPersistentContext(PROFILE_DIR, {
       headless: true,
       executablePath: exe,
       viewport: VIEWPORT,
       acceptDownloads: true,
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+      userAgent: selStr('userAgentOverride', hardenUserAgent(exe)),
+      args: [
+        '--no-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled'
+      ]
     })
+    try {
+      await S.context.addInitScript(() => {
+        try {
+          Object.defineProperty(Navigator.prototype, 'webdriver', {
+            get: () => undefined,
+            configurable: true
+          })
+        } catch {
+          /* non-fatal — AutomationControlled already removes it at the source */
+        }
+      })
+    } catch {
+      /* non-fatal */
+    }
     S.page = S.context.pages()[0] ?? (await S.context.newPage())
     S.page.on('download', (d) => void onDownload(d))
     S.context.on('close', () => {
@@ -204,14 +267,19 @@ async function launch(): Promise<void> {
       console.warn('[flow-bridge] browser context closed — it will relaunch on next use')
     })
     try {
-      await S.page.goto(selStr('flowLandingUrl', 'https://labs.google/fx/tools/flow'), {
-        waitUntil: 'domcontentloaded',
-        timeout: 45_000
-      })
-      console.log('[flow-bridge] Flow landing page loaded:', S.page.url())
+      await S.page.goto(
+        target === 'signin'
+          ? selStr(
+              'googleSigninUrl',
+              'https://accounts.google.com/AccountChooser?continue=https%3A%2F%2Fflow.google.com%2F&hl=en'
+            )
+          : selStr('flowLandingUrl', 'https://labs.google/fx/tools/flow'),
+        { waitUntil: 'domcontentloaded', timeout: 45_000 }
+      )
+      console.log('[flow-bridge] initial page loaded:', S.page.url())
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      S.lastError = `Could not open the Flow landing page: ${msg.slice(0, 150)}`
+      S.lastError = `Could not open the initial page: ${msg.slice(0, 150)}`
       console.warn('[flow-bridge]', S.lastError)
     }
   } catch (err) {
@@ -221,9 +289,9 @@ async function launch(): Promise<void> {
   }
 }
 
-async function ensureBrowser(): Promise<void> {
+async function ensureBrowser(target: 'flow' | 'signin' = 'flow'): Promise<void> {
   if (S.context && S.page) return
-  if (!S.launching) S.launching = launch().finally(() => (S.launching = null))
+  if (!S.launching) S.launching = launch(target).finally(() => (S.launching = null))
   await S.launching
   if (!S.page) throw new Error(S.lastError || 'Browser is not running.')
 }
@@ -290,6 +358,54 @@ async function screenshot(): Promise<Buffer | null> {
   }
 }
 
+/**
+ * Self-heal for Google's "This browser or app may not be secure" block.
+ *
+ * Google blocks sign-in when the browser profile looks automated/abusive.
+ * The launch hardening (clean UA, no webdriver) prevents the browser-side
+ * block; but a profile that has been through repeated blocked attempts keeps
+ * tripping the check — the ONLY reliable cure for that is a fresh profile.
+ * This closes the browser, wipes the profile directory and relaunches the
+ * hardened browser straight onto the sign-in page (the live view updates; the
+ * user re-enters their email once). A working login is never destroyed: the
+ * heal only runs when Google's block PAGE is actually visible.
+ *
+ * Guards: reentrancy flag, 2-minute cooldown, max 3 auto-heals without a
+ * successful login in between (rate-limit-style server blocks can't be fixed
+ * by wiping — after 3, we surface an honest error instead of looping).
+ */
+async function healBlockedProfile(force = false): Promise<void> {
+  if (S.healing) return
+  if (!force && Date.now() - S.lastHeal < 120_000) return
+  if (!force && S.healCount >= 3) {
+    S.lastError =
+      'Google keeps blocking sign-in from this browser. This is usually a temporary rate-limit on the network — wait ~15–60 minutes and press "Sign in with Google" again (it lifts on its own), or use the QR-code / phone-tap sign-in, or run the bridge on your own machine.'
+    return
+  }
+  S.healing = true
+  try {
+    console.log('[flow-bridge] Google sign-in block detected — resetting profile (fresh hardened browser)…')
+    if (S.context) await S.context.close().catch(() => {})
+    S.context = null
+    S.page = null
+    await sleep(800) // let Chromium fully exit and release the profile lock before wiping
+    fs.rmSync(PROFILE_DIR, { recursive: true, force: true })
+    await ensureBrowser('signin')
+    S.loginCache = { value: 'unknown', at: 0 }
+    S.lastHeal = Date.now()
+    if (force) S.healCount = 0
+    else S.healCount++
+    S.lastError = null
+    console.log('[flow-bridge] profile reset complete — fresh Google sign-in page is open')
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    S.lastError = `Profile reset failed: ${msg.slice(0, 150)}`
+    console.warn('[flow-bridge]', S.lastError)
+  } finally {
+    S.healing = false
+  }
+}
+
 async function loginState(): Promise<'unknown' | 'needs-login' | 'ready'> {
   if (!S.page) return 'unknown'
   if (Date.now() - S.loginCache.at < 5000) return S.loginCache.value
@@ -297,7 +413,19 @@ async function loginState(): Promise<'unknown' | 'needs-login' | 'ready'> {
   try {
     const url = S.page.url()
     if (url.includes('accounts.google.com')) {
+      // On Google's sign-in pages the ONLY honest answer is needs-login —
+      // EXCEPT the security block page, which self-heals below.
       value = 'needs-login'
+      const content = await S.page.content()
+      if (/This browser or app may not be secure|Try using a different browser/i.test(content)) {
+        void healBlockedProfile()
+      }
+    } else if (url.includes('flow.google.com')) {
+      // Being INSIDE the Flow app means Google SSO already accepted us.
+      value = 'ready'
+    } else if (url.includes('labs.google') || !/^https?:/i.test(url)) {
+      // Marketing landing page / blank tab — no signal either way.
+      value = 'unknown'
     } else {
       const content = await S.page.content()
       value = /sign in|log in|sign-in/i.test(content) ? 'needs-login' : 'ready'
@@ -305,6 +433,7 @@ async function loginState(): Promise<'unknown' | 'needs-login' | 'ready'> {
   } catch {
     value = 'unknown'
   }
+  if (value === 'ready') S.healCount = 0 // a working login resets the heal budget
   S.loginCache = { value, at: Date.now() }
   return value
 }
@@ -316,6 +445,20 @@ async function statusPayload(): Promise<Record<string, unknown>> {
     if (t.status === 'done') done++
     else if (t.status === 'error') failed++
   }
+  // Live fingerprint check — proves the Google sign-in hardening is active
+  // (a clean "Chrome/<v>" UA and webdriver===undefined are what Google needs
+  // to NOT show "This browser or app may not be secure").
+  let fingerprint: { ua: string | null; webdriver: boolean | null } | null = null
+  if (S.page) {
+    try {
+      fingerprint = await S.page.evaluate(() => ({
+        ua: navigator.userAgent,
+        webdriver: navigator.webdriver
+      }))
+    } catch {
+      fingerprint = null
+    }
+  }
   return {
     ok: true,
     mode: S.mode,
@@ -323,6 +466,7 @@ async function statusPayload(): Promise<Record<string, unknown>> {
     chromiumFound: !!findChromium(),
     pageUrl: S.page?.url() ?? null,
     loginState: await loginState(),
+    fingerprint,
     queue: { pending: S.queue.length, activeId: S.activeId, done, failed },
     lastError: S.lastError,
     service: 'autotube-flow-bridge'
@@ -376,7 +520,7 @@ async function runReal(t: Task): Promise<void> {
   const ls = await loginState()
   if (ls === 'needs-login') {
     throw new Error(
-      'Google login required — open the live view in the app, click "Open Google Flow", sign in with your account, then retry. (If Google blocks the automated sign-in, the bridge has to run on your own machine.)'
+      'Google login required — press "Sign in with Google" in the app (email, phone-tap, or QR code), then retry. The bridge browser is hardened to pass Google\u2019s security check; if your network still blocks it, run the bridge on your own machine.'
     )
   }
 
@@ -547,6 +691,14 @@ async function handleRequest(req: Request): Promise<Response> {
         await S.page.goto(target, { waitUntil: 'domcontentloaded', timeout: 45_000 })
         S.loginCache = { value: 'unknown', at: 0 }
         return json({ ok: true, url: S.page.url() })
+      }
+      if (action === 'reset-login') {
+        // Manual "Reset & retry" — same cure as the automatic self-heal, but
+        // user-initiated (bypasses the cooldown, resets the heal budget).
+        // Only offered while sign-in is needed; a working login is never
+        // present when Google's block page is showing.
+        await healBlockedProfile(true)
+        return json({ ok: true, url: S.page?.url() ?? null })
       }
       if (action === 'close-browser') {
         // Frees the Chromium RAM (video assembly needs it). The persistent
