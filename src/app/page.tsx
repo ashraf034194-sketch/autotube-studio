@@ -39,7 +39,10 @@ import {
   Send,
   Keyboard,
   Power,
-  RefreshCw
+  RefreshCw,
+  Mail,
+  Smartphone,
+  QrCode
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -1195,7 +1198,7 @@ function OnboardingGuide({ transcript, onDismiss }: OnboardingGuideProps) {
     ? 'The Flow Bridge service is not connected right now. Your run will pause at the image stage and switch to the manual handoff (copy prompts → upload images) — everything else stays automatic.'
     : simMode
       ? 'Simulation mode is ON: runs would use placeholder frames, NOT real Flow images. Turn it off (run panel → “testing tools”) before making a real video.'
-      : 'Use the “Google Flow Connect” card below: press “Open & sign in”, then log into your Google account in the live view — ONE time only. The bridge remembers you for every future run. When it shows “connected”, every image will come from the real Flow.'
+      : 'Use the “Google Flow Connect” card below: press “Sign in with Google”, then log into your Google account in the live view — ONE time only (if email is blocked, Google’s page offers the phone-tap and QR-code methods — scan the QR with your phone, no password needed). The bridge remembers you for every future run. When it shows “connected”, every image will come from the real Flow.'
 
   const allSet = scriptReady && loginReady
 
@@ -1342,6 +1345,75 @@ function StatusLight({
 // will be generated & downloaded from the real Flow — and only then presses
 // "Start Full Autopilot". Shown only while no run is active. During a run the
 // FlowBridgePanel (pause UI) takes over with the same live-view controls.
+
+/** Google "G" mark for the "Sign in with Google" button (standard sign-in glyph). */
+function GoogleG({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden="true" focusable="false">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Google's own alternative sign-in methods — surfaced in the UI whenever the
+ * sign-in page is actually up, because "email sign-in is blocked" is the most
+ * common login failure for a remote-controlled browser. All three methods are
+ * provided by Google itself on the page shown in the live view; nothing is
+ * bypassed.
+ */
+function GoogleSigninMethods() {
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-2.5">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        email sign-in not working? — google&rsquo;s own alternatives
+      </p>
+      <ul className="space-y-1.5">
+        <li className="flex gap-2">
+          <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
+          <span className="text-[11px] leading-relaxed text-zinc-400">
+            <span className="font-semibold text-zinc-300">Email + password:</span> click the page
+            below to focus the field, type your email in the box under the live view, send it, then
+            the password the same way.
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <Smartphone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
+          <span className="text-[11px] leading-relaxed text-zinc-400">
+            <span className="font-semibold text-zinc-300">Phone tap — no password typed here:</span>{' '}
+            after your email, click <span className="font-medium text-zinc-300">&ldquo;Try another way&rdquo;</span>{' '}
+            on the page and approve the prompt on your phone.
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <QrCode className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
+          <span className="text-[11px] leading-relaxed text-zinc-400">
+            <span className="font-semibold text-zinc-300">QR code — no email, no password:</span> on
+            the page choose the passkey option / &ldquo;Try another way&rdquo; →{' '}
+            <span className="font-medium text-zinc-300">&ldquo;Sign in with a QR code&rdquo;</span>{' '}
+            → scan the QR shown in the live view with your phone camera → tap Allow. This browser
+            signs straight in.
+          </span>
+        </li>
+      </ul>
+    </div>
+  )
+}
 
 function FlowConnectCard() {
   const { toast } = useToast()
@@ -1502,24 +1574,25 @@ function FlowConnectCard() {
           ) : (
             <>
               <p className="text-xs leading-relaxed text-zinc-400">
-                Press <span className="font-semibold text-zinc-200">Open &amp; sign in</span> — the
-                real Google&nbsp;Flow opens in the bridge browser below. Click the page to focus
-                fields and type your Google account. One time only; the bridge remembers you.
+                Press <span className="font-semibold text-zinc-200">Sign in with Google</span> —
+                Google&rsquo;s own sign-in page opens in the bridge browser below. Sign in ONE time
+                (email, phone tap, or QR code — whatever Google allows); the bridge remembers you
+                for every future run.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   size="sm"
-                  className="h-9 bg-emerald-500 text-zinc-950 hover:bg-emerald-400"
-                  onClick={() => void control('login')}
-                  disabled={busy === 'login'}
+                  className="h-9 bg-white text-zinc-900 hover:bg-zinc-200"
+                  onClick={() => void control('google-signin')}
+                  disabled={busy === 'google-signin'}
                 >
-                  {busy === 'login' ? (
+                  {busy === 'google-signin' ? (
                     <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                   ) : (
-                    <LogIn className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                    <GoogleG className="mr-1.5 h-4 w-4" />
                   )}
-                  Open &amp; sign in
+                  Sign in with Google
                 </Button>
                 <Button
                   type="button"
@@ -1533,9 +1606,12 @@ function FlowConnectCard() {
                   Flow app
                 </Button>
               </div>
+              {needsLogin && <GoogleSigninMethods />}
               <p className="text-[10px] leading-relaxed text-zinc-600">
-                Honest note: Google sometimes blocks sign-ins from automated browsers — if that
-                happens, run the bridge on your own machine instead.
+                Honest note: Google sometimes blocks password sign-ins from automated browsers —
+                that&rsquo;s exactly what the phone-tap and QR-code options above are for
+                (Google&rsquo;s own sign-in methods). After one successful login the profile remembers
+                you. If every method is blocked, run the bridge on your own machine instead.
               </p>
             </>
           )}
@@ -1546,7 +1622,7 @@ function FlowConnectCard() {
               <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                 <span className="flex items-center gap-1">
                   <Monitor className="h-3 w-3" aria-hidden="true" />
-                  live Flow tab — click to control
+                  live view — click to control
                 </span>
                 <button
                   type="button"
@@ -1562,7 +1638,7 @@ function FlowConnectCard() {
               <div className="relative overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
                 <img
                   src={`/api/flow-bridge/frame?v=${frameTs}`}
-                  alt="Live view of the real Google Flow page inside the Flow Bridge browser"
+                  alt="Live view of the bridge browser (Google sign-in page or the real Google Flow)"
                   className="aspect-[16/10] w-full cursor-crosshair select-none object-cover"
                   onClick={onFrameClick}
                   onError={() => setFrameBad(true)}
@@ -1584,9 +1660,9 @@ function FlowConnectCard() {
                       sendTyped()
                     }
                   }}
-                  placeholder="type into the Flow page (sign-in…)"
+                  placeholder="type your email / password here, then press Enter…"
                   className="h-8 border-zinc-700 bg-zinc-950 text-[11px] placeholder:text-zinc-600"
-                  aria-label="Text to type into the live Google Flow page"
+                  aria-label="Text to type into the live page (Google sign-in or Flow)"
                   maxLength={500}
                 />
                 <Button
@@ -1998,15 +2074,19 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
               </p>
             </div>
           ) : needsLogin ? (
-            <div className="flex items-start gap-2 rounded-md border border-amber-500/25 bg-amber-500/5 px-3 py-2.5 text-[11px] leading-relaxed text-amber-200/80">
-              <LogIn className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
-              <p>
-                <span className="font-semibold text-amber-300">One-time Google login.</span> Click{' '}
-                <span className="font-semibold">Open Google Flow</span> on the live view, then sign
-                in by clicking the page and typing below (the login persists in the bridge’s
-                profile). Honest note: Google sometimes blocks sign-ins from automated browsers —
-                if that happens, the bridge must run on your own machine instead.
-              </p>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 rounded-md border border-amber-500/25 bg-amber-500/5 px-3 py-2.5 text-[11px] leading-relaxed text-amber-200/80">
+                <LogIn className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+                <p>
+                  <span className="font-semibold text-amber-300">One-time Google login.</span> Press{' '}
+                  <span className="font-semibold">Sign in with Google</span> next to the live view
+                  (email — or, if that is blocked, Google’s own alternatives: approve on your phone,
+                  or scan the QR code with your phone — no password typed here). The login persists
+                  in the bridge’s profile. If every method is blocked, the bridge must run on your
+                  own machine instead.
+                </p>
+              </div>
+              <GoogleSigninMethods />
             </div>
           ) : null}
 
@@ -2206,7 +2286,7 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
               <>
                 <img
                   src={`/api/flow-bridge/frame?v=${frameTs}`}
-                  alt="Live view of the real Google Flow page inside the Flow Bridge browser"
+                  alt="Live view of the bridge browser (Google sign-in page or the real Google Flow)"
                   className="aspect-[16/10] w-full cursor-crosshair select-none object-cover"
                   onClick={onFrameClick}
                   onError={() => setFrameBad(true)}
@@ -2235,6 +2315,20 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
           {browserRunning && (
             <div className="space-y-1.5">
               <div className="flex flex-wrap gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-7 bg-white px-2 text-[10px] text-zinc-900 hover:bg-zinc-200"
+                  onClick={() => void control('google-signin')}
+                  disabled={busy === 'google-signin'}
+                >
+                  {busy === 'google-signin' ? (
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <GoogleG className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  Sign in with Google
+                </Button>
                 <Button
                   type="button"
                   size="sm"
@@ -2268,9 +2362,9 @@ function FlowBridgePanel({ snap }: { snap: AutopilotSnapshot }) {
                       sendTyped()
                     }
                   }}
-                  placeholder="type into the Flow page (login, prompts…)"
+                  placeholder="type email / text into the live page…"
                   className="h-7 border-zinc-700 bg-zinc-950 text-[11px] placeholder:text-zinc-600"
-                  aria-label="Text to type into the live Google Flow page"
+                  aria-label="Text to type into the live page (Google sign-in or Flow)"
                   maxLength={500}
                 />
                 <Button

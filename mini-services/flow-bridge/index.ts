@@ -528,6 +528,26 @@ async function handleRequest(req: Request): Promise<Response> {
         S.loginCache = { value: 'unknown', at: 0 }
         return json({ ok: true, url: S.page.url() })
       }
+      if (action === 'google-signin') {
+        // "Sign in with Google" — jump straight to GOOGLE'S OWN sign-in page
+        // (skipping the Flow marketing landing page). This surfaces every
+        // method Google itself supports for this browser: email+password,
+        // "Try another way" → phone prompt (tap Yes on your phone, no
+        // password typed here), passkey / QR-code sign-in (scan the QR shown
+        // in the app's live view with your phone — no email, no password),
+        // and the account chooser ("Continue as …") when the profile already
+        // knows an account. AccountChooser falls back to the normal sign-in
+        // form when nothing is remembered, so one URL covers all cases.
+        await ensureBrowser()
+        if (!S.page) return json({ error: S.lastError || 'Browser is not running.' }, 503)
+        const target = selStr(
+          'googleSigninUrl',
+          'https://accounts.google.com/AccountChooser?continue=https%3A%2F%2Fflow.google.com%2F&hl=en'
+        )
+        await S.page.goto(target, { waitUntil: 'domcontentloaded', timeout: 45_000 })
+        S.loginCache = { value: 'unknown', at: 0 }
+        return json({ ok: true, url: S.page.url() })
+      }
       if (action === 'close-browser') {
         // Frees the Chromium RAM (video assembly needs it). The persistent
         // profile keeps the Google login; ensureBrowser() relaunches on the

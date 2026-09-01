@@ -2,6 +2,7 @@
   "_comment": "Flow UI automation selectors. Google Flow (labs.google/fx/tools/flow) has NO public API and its DOM changes often — edit this file (no code changes needed) if the bridge stops finding the prompt box or submit button. Use the app's live view to inspect the current Flow page.",
   "flowLandingUrl": "https://labs.google/fx/tools/flow",
   "flowAppUrl": "https://flow.google.com/",
+  "googleSigninUrl": "https://accounts.google.com/AccountChooser?continue=https%3A%2F%2Fflow.google.com%2F&hl=en",
   "promptBoxSelectors": [
     "textarea",
     "[contenteditable='true']",
